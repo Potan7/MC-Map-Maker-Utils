@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "mapmakerutils",
+	"version": "${version}",
+	"name": "Map Maker's Command Utilities",
+	"description": "Add some commands to help make datapacks and maps.",
+	"authors": [
+		"Potan7"
+	],
+	"contact": {
+		"sources": "https://github.com/Potan7/MC-Map-Maker-Utils"
+	},
+	"license": "MIT",
+	"icon": "assets/mapmakerutils/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.potan.mapmakerutils.MapMakerUtils"
+		],
+		"client": [
+			"com.potan.mapmakerutils.MapMakerUtilsClient"
+		]
+	},
+	"mixins": [
+		"mapmakerutils.mixins.json",
+		{
+			"config": "mapmakerutils.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.2",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

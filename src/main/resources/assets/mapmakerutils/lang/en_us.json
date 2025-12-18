@@ -1,0 +1,9 @@
+{
+  "mapmakerutils.feedback.datapack_folder_opened": "Opened datapack folder.",
+  "mapmakerutils.feedback.datapack_folder_created": "Datapack folder did not exist, so it was created and opened.",
+  "mapmakerutils.feedback.reloading_world": "Reloading the world...",
+  "mapmakerutils.feedback.position_copied": "Copied position to clipboard: %s",
+  "mapmakerutils.feedback.rotation_copied": "Copied rotation to clipboard: %s",
+  "mapmakerutils.error.failed_to_open_datapack": "Failed to open datapack folder: %s",
+  "mapmakerutils.error.singleplayer_only": "You must be in a singleplayer world to use this command."
+}
