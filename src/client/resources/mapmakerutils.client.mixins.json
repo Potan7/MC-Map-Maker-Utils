@@ -3,7 +3,9 @@
 	"package": "com.potan.mapmakerutils.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"TitleScreenMixin"
+		"TitleScreenMixin",
+		"DatapackLoadFailureScreenMixin",
+		"RegistryErrorMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

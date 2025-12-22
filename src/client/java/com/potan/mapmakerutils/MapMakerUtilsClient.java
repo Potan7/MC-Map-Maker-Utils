@@ -19,9 +19,11 @@ import net.minecraft.network.chat.Component;
 
 public class MapMakerUtilsClient implements ClientModInitializer {
 	public static String WorldToRejoin = null;
+	public static String lastDatapackErrorDetails = null;
 
 	@Override
 	public void onInitializeClient() {
+		// Register client-side commands
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 			dispatcher.register(ClientCommandManager.literal("openpackfolder").executes(this::openDatapackFolder));
 		});
@@ -40,6 +42,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int openDatapackFolder(CommandContext<FabricClientCommandSource> context) {
+		// Open the datapack folder of the current singleplayer world
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -69,7 +72,8 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int hardReload(CommandContext<FabricClientCommandSource> context) {
-		
+		// Reload the current singleplayer world
+
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -86,6 +90,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int copyPos(CommandContext<FabricClientCommandSource> context) {
+		// Copy player position to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			BlockPos pos = mc.player.blockPosition();
@@ -101,6 +106,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int copyRot(CommandContext<FabricClientCommandSource> context) {
+		// Copy player rotation to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			float yaw = mc.player.getYRot();
