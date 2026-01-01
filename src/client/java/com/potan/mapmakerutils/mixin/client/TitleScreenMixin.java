@@ -1,6 +1,7 @@
 package com.potan.mapmakerutils.mixin.client;
 
 import com.potan.mapmakerutils.MapMakerUtilsClient;
+import com.potan.mapmakerutils.ModGlobalState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,11 +24,11 @@ public class TitleScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo info) {
-        if (MapMakerUtilsClient.WorldToRejoin == null)
+        if (ModGlobalState.WorldToRejoin == null)
             return;
 
-        String worldName = MapMakerUtilsClient.WorldToRejoin;
-        MapMakerUtilsClient.WorldToRejoin = null;
+        String worldName = ModGlobalState.WorldToRejoin;
+        ModGlobalState.WorldToRejoin = null;
 
         minecraft.execute(() -> {
             this.minecraft.createWorldOpenFlows()

@@ -2,6 +2,8 @@ package com.potan.mapmakerutils;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,9 +20,6 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
 
 public class MapMakerUtilsClient implements ClientModInitializer {
-	public static String WorldToRejoin = null;
-	public static String lastDatapackErrorDetails = null;
-
 	@Override
 	public void onInitializeClient() {
 		// Register client-side commands
@@ -78,7 +77,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 		IntegratedServer server = mc.getSingleplayerServer();
 
 		if (server != null) {
-			WorldToRejoin = server.getWorldPath(LevelResource.ROOT).getParent().getFileName().toString();
+			ModGlobalState.WorldToRejoin = server.getWorldPath(LevelResource.ROOT).getParent().getFileName().toString();
 			mc.disconnectFromWorld(Component.literal("Reload Map"));
 			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.reloading_world"));
 		} else {

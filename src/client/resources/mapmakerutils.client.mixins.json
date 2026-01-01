@@ -5,7 +5,9 @@
 	"client": [
 		"TitleScreenMixin",
 		"DatapackLoadFailureScreenMixin",
-		"RegistryErrorMixin"
+		"RegistryErrorMixin",
+		"BackupConfirmScreenMixin",
+		"WorldOpenFlowsMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

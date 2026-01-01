@@ -1,6 +1,7 @@
 package com.potan.mapmakerutils.mixin.client;
 
 import com.potan.mapmakerutils.MapMakerUtilsClient;
+import com.potan.mapmakerutils.ModGlobalState;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceKey; // 임포트 필수
 import org.spongepowered.asm.mixin.Mixin;
@@ -34,7 +35,7 @@ public class RegistryErrorMixin {
             String errorMsg = exception.getMessage();
 
             // 메시지 다듬기
-            MapMakerUtilsClient.lastDatapackErrorDetails =
+            ModGlobalState.lastDatapackErrorDetails =
                     "§c[Path]: " + filePath +
                             "\n§7[Msg]: " + errorMsg;
 

@@ -5,5 +5,6 @@
   "mapmakerutils.feedback.position_copied": "클립보드에 좌표를 복사했습니다: %s",
   "mapmakerutils.feedback.rotation_copied": "클립보드에 회전값을 복사했습니다: %s",
   "mapmakerutils.error.failed_to_open_datapack": "데이터팩 폴더를 열지 못했습니다: %s",
-  "mapmakerutils.error.singleplayer_only": "싱글플레이 월드에서만 이 명령어를 사용할 수 있습니다."
+  "mapmakerutils.error.singleplayer_only": "싱글플레이 월드에서만 이 명령어를 사용할 수 있습니다.",
+  "mapmakerutils.ui.session_ignore_button": "이번 게임 동안 무시하기"
 }

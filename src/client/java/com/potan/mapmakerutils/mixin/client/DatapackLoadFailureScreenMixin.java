@@ -1,6 +1,7 @@
 package com.potan.mapmakerutils.mixin.client;
 
 import com.potan.mapmakerutils.MapMakerUtilsClient;
+import com.potan.mapmakerutils.ModGlobalState;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.DatapackLoadFailureScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,13 +21,13 @@ public class DatapackLoadFailureScreenMixin extends Screen {
     @Inject(method = "render", at = @At("TAIL"))
     public void renderErrorDetails(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         // 에러 내용이 없으면 아무것도 안 함
-        if (MapMakerUtilsClient.lastDatapackErrorDetails == null) return;
+        if (ModGlobalState.lastDatapackErrorDetails == null) return;
 
         // 마인크래프트 폰트 높이 (보통 9)
         int fontHeight = this.font.lineHeight;
 
         // 여러 줄일 경우를 대비해 나눔
-        String[] lines = MapMakerUtilsClient.lastDatapackErrorDetails.split("\n");
+        String[] lines = ModGlobalState.lastDatapackErrorDetails.split("\n");
 
         // 화면 상단에서 30픽셀 내려온 곳부터 시작
         int y = 30;
@@ -44,7 +45,7 @@ public class DatapackLoadFailureScreenMixin extends Screen {
     @Override
     public void onClose() {
         // 화면 닫을 때 데이터 초기화
-        MapMakerUtilsClient.lastDatapackErrorDetails = null;
+        ModGlobalState.lastDatapackErrorDetails = null;
         super.onClose();
     }
 }
