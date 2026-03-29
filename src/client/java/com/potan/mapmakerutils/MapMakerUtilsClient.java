@@ -2,8 +2,6 @@ package com.potan.mapmakerutils;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -17,6 +15,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 
 public class MapMakerUtilsClient implements ClientModInitializer {
 	@Override
@@ -31,15 +31,55 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copypos").executes(this::copyPos));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copypos")
+				.executes(this::copyPos)
+				.then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("me").executes(this::copyPos))
+				.then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("lookat").executes(this::copyLookAtPos)));
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copyrot").executes(this::copyRot));
 		});
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("openvscode").executes(this::openWithVSCode));
+		});
 	}
+
+	int openWithVSCode(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		IntegratedServer server = mc.getSingleplayerServer();
+
+		if (server != null) {
+			try {
+				Path datapckPath = server.getWorldPath(LevelResource.DATAPACK_DIR);
+				File file = datapckPath.toFile();
+				if (!file.exists()) file.mkdirs();
+
+				String path = file.getAbsolutePath();
+				String os = System.getProperty("os.name").toLowerCase();
+				ProcessBuilder pb;
+				
+				if (os.contains("win")) {
+					pb = new ProcessBuilder("cmd.exe", "/c", "code", path);
+				} else {
+					pb = new ProcessBuilder("code", path);
+				}
+				
+				pb.start();
+				context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.vscode_opening"));
+			} catch (Exception e) {
+				context.getSource().sendError(Component.translatable("mapmakerutils.error.vscode_failed"));
+				return 0;
+			}
+		} else {
+			context.getSource().sendError(Component.translatable("mapmakerutils.error.singleplayer_only"));
+			return 0;
+		}
+		return Command.SINGLE_SUCCESS;
+	}
+
 	int openDatapackFolder(CommandContext<FabricClientCommandSource> context) {
-		// Open the datapack folder of the current singleplayer world
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -69,8 +109,6 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int hardReload(CommandContext<FabricClientCommandSource> context) {
-		// Reload the current singleplayer world
-
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -87,14 +125,10 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int copyPos(CommandContext<FabricClientCommandSource> context) {
-		// Copy player position to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			BlockPos pos = mc.player.blockPosition();
-			int x = pos.getX();
-			int y = pos.getY();
-			int z = pos.getZ();
-			String posString = x + " " + y + " " + z;
+			String posString = pos.getX() + " " + pos.getY() + " " + pos.getZ();
 			mc.keyboardHandler.setClipboard(posString);
 			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.position_copied", posString));
 			return Command.SINGLE_SUCCESS;
@@ -102,8 +136,23 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 		return 0;
 	}
 
+	int copyLookAtPos(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK) {
+			BlockHitResult blockHit = (BlockHitResult) mc.hitResult;
+			BlockPos pos = blockHit.getBlockPos();
+			String posString = pos.getX() + " " + pos.getY() + " " + pos.getZ();
+
+			mc.keyboardHandler.setClipboard(posString);
+			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.lookat_position_copied", posString));
+			return Command.SINGLE_SUCCESS;
+		} else {
+			context.getSource().sendError(Component.translatable("mapmakerutils.error.no_block_looked_at"));
+			return 0;
+		}
+	}
+
 	int copyRot(CommandContext<FabricClientCommandSource> context) {
-		// Copy player rotation to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			float yaw = mc.player.getYRot();
@@ -113,7 +162,6 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.rotation_copied", rotString));
 			return Command.SINGLE_SUCCESS;
 		}
-
 		return 0;
 	}
 }

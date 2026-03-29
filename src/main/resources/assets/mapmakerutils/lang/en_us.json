@@ -4,7 +4,11 @@
   "mapmakerutils.feedback.reloading_world": "Reloading the world...",
   "mapmakerutils.feedback.position_copied": "Copied position to clipboard: %s",
   "mapmakerutils.feedback.rotation_copied": "Copied rotation to clipboard: %s",
+  "mapmakerutils.feedback.lookat_position_copied": "Copied looked-at block position to clipboard: %s",
   "mapmakerutils.error.failed_to_open_datapack": "Failed to open datapack folder: %s",
+  "mapmakerutils.error.no_block_looked_at": "You are not looking at any block.",
   "mapmakerutils.error.singleplayer_only": "You must be in a singleplayer world to use this command.",
+  "mapmakerutils.feedback.vscode_opening": "Opening current datapack folder in VS Code...",
+  "mapmakerutils.error.vscode_failed": "Failed to open VS Code. Please make sure it is installed and added to your PATH.",
   "mapmakerutils.ui.session_ignore_button": "Ignore for this session"
 }
