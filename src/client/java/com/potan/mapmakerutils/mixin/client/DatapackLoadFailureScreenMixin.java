@@ -2,7 +2,7 @@ package com.potan.mapmakerutils.mixin.client;
 
 import com.potan.mapmakerutils.MapMakerUtilsClient;
 import com.potan.mapmakerutils.ModGlobalState;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.DatapackLoadFailureScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -18,8 +18,8 @@ public class DatapackLoadFailureScreenMixin extends Screen {
         super(component);
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    public void renderErrorDetails(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    public void renderErrorDetails(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a, CallbackInfo ci) {
         // 에러 내용이 없으면 아무것도 안 함
         if (ModGlobalState.lastDatapackErrorDetails == null) return;
 
@@ -33,9 +33,9 @@ public class DatapackLoadFailureScreenMixin extends Screen {
         int y = 30;
 
         for (String line : lines) {
-            // [핵심] 표준 메서드 drawCenteredString 사용
-            // 색상: 0xFFFFFFFF (앞의 FF가 불투명도 100%를 의미. 이거 없으면 투명해서 안 보임)
-            guiGraphics.drawCenteredString(this.font, line, this.width / 2, y, 0xFFFFFFFF);
+            // [핵심] 26.1에서는 graphics 객체가 그리기 명령을 추출(Extract)합니다.
+//            graphics.drawCenteredString(this.font, line, this.width / 2, y, 0xFFFFFFFF);
+            graphics.centeredText(this.font, line, this.width / 2, y, 0xFFFFFFFF);
 
             // 다음 줄로 이동 (폰트 높이 + 2픽셀 여백)
             y += fontHeight + 2;

@@ -6,10 +6,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.Minecraft;
@@ -24,22 +23,21 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		// Register client-side commands
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(ClientCommandManager.literal("openpackfolder").executes(this::openDatapackFolder));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("openpackfolder").executes(this::openDatapackFolder));
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(ClientCommandManager.literal("hardreload").executes(this::hardReload));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("hardreload").executes(this::hardReload));
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(ClientCommandManager.literal("copypos").executes(this::copyPos));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copypos").executes(this::copyPos));
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(ClientCommandManager.literal("copyrot").executes(this::copyRot));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copyrot").executes(this::copyRot));
 		});
 	}
-
 	int openDatapackFolder(CommandContext<FabricClientCommandSource> context) {
 		// Open the datapack folder of the current singleplayer world
 		Minecraft mc = Minecraft.getInstance();
