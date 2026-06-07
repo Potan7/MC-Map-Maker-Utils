@@ -935,6 +935,8 @@ public class DialogEditorScreen extends Screen {
             Files.writeString(targetFile, json);
 
             // Hot-swap in-memory registry
+            boolean hotSwapped = false;
+            String hotSwapError = null;
             try {
                 com.google.gson.JsonElement jsonElement = com.google.gson.JsonParser.parseString(json);
                 com.mojang.serialization.DataResult<net.minecraft.core.Holder<net.minecraft.server.dialog.Dialog>> parseResult = net.minecraft.server.dialog.Dialog.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, jsonElement);
@@ -959,18 +961,18 @@ public class DialogEditorScreen extends Screen {
                     // ignore client registry hot-swap failure
                 }
                 
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§a[MapMakerUtils] Hot-swapped dialog registry in memory!"));
-                }
+                hotSwapped = true;
             } catch (Exception e) {
                 e.printStackTrace();
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Hot-swap failed: " + e.getMessage()));
-                }
+                hotSwapError = e.getMessage();
             }
 
             if (this.minecraft.player != null) {
-                this.minecraft.player.sendSystemMessage(Component.literal("§a[MapMakerUtils] Dialog saved successfully to " + this.namespace + ":" + this.filename));
+                if (hotSwapped) {
+                    this.minecraft.player.sendSystemMessage(Component.literal("§a[MapMakerUtils] Dialog saved and hot-swapped successfully to " + this.namespace + ":" + this.filename));
+                } else {
+                    this.minecraft.player.sendSystemMessage(Component.literal("§e[MapMakerUtils] Dialog saved to " + this.namespace + ":" + this.filename + ", but hot-swap failed: " + hotSwapError));
+                }
             }
             return true;
         } catch (Exception e) {
@@ -1653,6 +1655,57 @@ public class DialogEditorScreen extends Screen {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public boolean runAutomationTest() {
+        try {
+            // 1. Setup field values programmatically
+            this.namespaceField.setValue("test_temp");
+            this.filenameField.setValue("test_gui");
+            this.datapackField.setValue("mapmakerutils_generated");
+            this.titleField.setValue("Auto-Test Dialog");
+            
+            // 2. Change dialog type
+            this.cycleDialogType(); // Changes type from notice to confirmation
+            
+            // 3. Add body elements
+            BodyElement elem = new BodyElement();
+            elem.type = "minecraft:plain_message";
+            elem.contents = "Automated In-Game UI test!";
+            this.model.body.add(elem);
+            
+            // 4. Trigger save
+            boolean saved = this.saveToDatapack();
+            if (!saved) return false;
+            
+            // 5. Verify file was saved correctly
+            IntegratedServer server = this.minecraft.getSingleplayerServer();
+            if (server == null) return false;
+            
+            Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
+            Path targetFile = datapackDir.resolve(this.datapackName)
+                .resolve("data").resolve(this.namespace)
+                .resolve("dialog").resolve(this.filename + ".json");
+            
+            if (!Files.exists(targetFile)) return false;
+            
+            String json = Files.readString(targetFile);
+            if (!json.contains("Automated In-Game UI test!")) return false;
+            if (!json.contains("minecraft:confirmation")) return false;
+            
+            // 6. Verify hot-swapping in memory registry
+            net.minecraft.core.Registry<net.minecraft.server.dialog.Dialog> dialogRegistry = 
+                server.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DIALOG);
+            if (!dialogRegistry.containsKey(Identifier.parse("test_temp:test_gui"))) return false;
+            
+            // 7. Cleanup generated test files
+            Files.delete(targetFile);
+            
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

@@ -68,6 +68,29 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 					})
 					.executes(this::openEditorExisting)));
 		});
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("testdialogeditor")
+				.executes(this::runTest));
+		});
+	}
+
+	int runTest(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		mc.execute(() -> {
+			DialogEditorScreen screen = new DialogEditorScreen(null);
+			mc.setScreen(screen);
+			
+			boolean success = screen.runAutomationTest();
+			mc.setScreen(null); // Close the screen
+			
+			if (success) {
+				context.getSource().sendFeedback(Component.literal("§a[MapMakerUtils] In-Game UI automation test PASSED!"));
+			} else {
+				context.getSource().sendError(Component.literal("§c[MapMakerUtils] In-Game UI automation test FAILED!"));
+			}
+		});
+		return Command.SINGLE_SUCCESS;
 	}
 
 	int openEditorEmpty(CommandContext<FabricClientCommandSource> context) {

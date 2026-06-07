@@ -587,7 +587,11 @@ public class DialogJsonGenerator {
                         if (inputObj.has("start")) input.start = inputObj.get("start").getAsFloat();
                         if (inputObj.has("end")) input.end = inputObj.get("end").getAsFloat();
                         if (inputObj.has("step")) input.step = inputObj.get("step").getAsFloat();
-                        if (inputObj.has("initial")) input.initialFloat = inputObj.get("initial").getAsFloat();
+                        if (inputObj.has("initial")) {
+                            input.initialFloat = inputObj.get("initial").getAsFloat();
+                        } else {
+                            input.initialFloat = (input.start + input.end) / 2.0f;
+                        }
                         break;
                 }
                 model.inputs.add(input);
@@ -597,11 +601,26 @@ public class DialogJsonGenerator {
         // Actions / Custom fields depending on Type
         switch (model.type) {
             case "minecraft:notice":
-                if (root.has("action")) model.noticeAction = deserializeClickAction(root.getAsJsonObject("action"));
+                if (root.has("action")) {
+                    model.noticeAction = deserializeClickAction(root.getAsJsonObject("action"));
+                    if (model.noticeAction.label.isEmpty()) {
+                        model.noticeAction.label = "gui.ok";
+                    }
+                }
                 break;
             case "minecraft:confirmation":
-                if (root.has("yes")) model.confirmYes = deserializeClickAction(root.getAsJsonObject("yes"));
-                if (root.has("no")) model.confirmNo = deserializeClickAction(root.getAsJsonObject("no"));
+                if (root.has("yes")) {
+                    model.confirmYes = deserializeClickAction(root.getAsJsonObject("yes"));
+                    if (model.confirmYes.label.isEmpty()) {
+                        model.confirmYes.label = "gui.yes";
+                    }
+                }
+                if (root.has("no")) {
+                    model.confirmNo = deserializeClickAction(root.getAsJsonObject("no"));
+                    if (model.confirmNo.label.isEmpty()) {
+                        model.confirmNo.label = "gui.no";
+                    }
+                }
                 break;
             case "minecraft:multi_action":
                 if (root.has("actions")) {
@@ -611,12 +630,22 @@ public class DialogJsonGenerator {
                     }
                 }
                 if (root.has("columns")) model.columns = root.get("columns").getAsInt();
-                if (root.has("exit_action")) model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                if (root.has("exit_action")) {
+                    model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                    if (model.exitAction.label.isEmpty()) {
+                        model.exitAction.label = "gui.back";
+                    }
+                }
                 break;
             case "minecraft:server_links":
                 if (root.has("columns")) model.columns = root.get("columns").getAsInt();
                 if (root.has("button_width")) model.buttonWidth = root.get("button_width").getAsInt();
-                if (root.has("exit_action")) model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                if (root.has("exit_action")) {
+                    model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                    if (model.exitAction.label.isEmpty()) {
+                        model.exitAction.label = "gui.back";
+                    }
+                }
                 break;
             case "minecraft:dialog_list":
                 if (root.has("dialogs")) {
@@ -627,7 +656,12 @@ public class DialogJsonGenerator {
                 }
                 if (root.has("columns")) model.columns = root.get("columns").getAsInt();
                 if (root.has("button_width")) model.buttonWidth = root.get("button_width").getAsInt();
-                if (root.has("exit_action")) model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                if (root.has("exit_action")) {
+                    model.exitAction = deserializeClickAction(root.getAsJsonObject("exit_action"));
+                    if (model.exitAction.label.isEmpty()) {
+                        model.exitAction.label = "gui.back";
+                    }
+                }
                 break;
         }
 
