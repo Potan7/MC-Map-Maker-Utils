@@ -1,5 +1,5 @@
 # Map Maker's Utils (MMU)
-**Streamline your Map Making & Data Pack workflow in Minecraft 26.1**  
+**Streamline your Map Making & Data Pack workflow in Minecraft 26.1.2**  
 마인크래프트 맵 제작과 데이터팩 개발을 위한 유틸리티 모드입니다.
 
 ---
@@ -41,20 +41,20 @@
 ---
 
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.1 - 1.21.11
-*   **Fabric Loader**: 0.18.5+
+*   **Minecraft**: 26.1.2 - 1.21.11
+*   **Fabric Loader**: 0.19.3+
 *   **Fabric API**: Required
 
 ## License / 라이선스
 This mod is available under the **MIT License**.
 
 ### 최신 기능에 대하여
-- 현재 최신 기능은 항상 최신 버전을 기준으로 제작됩니다. 이전 버전에서는 일부 기능이 지원되지 않을 수 있습니다. 만약 요청이 들어온다면 이전 버전에서도 사용할 수 있도록 기능을 추가할 수도 있습니다. (예: `/openvscode` 명령어는 26.1 부터 지원되며, 이전 버전에서는 사용할 수 없습니다.)
+- 현재 최신 기능은 항상 최신 버전을 기준으로 제작됩니다. 이전 버전에서는 일부 기능이 지원되지 않을 수 있습니다. 만약 요청이 들어온다면 이전 버전에서도 사용할 수 있도록 기능을 추가할 수도 있습니다. (예: `/openvscode` 명령어는 26.1.2 부터 지원되며, 이전 버전에서는 사용할 수 없습니다.)
 
 ---
 
 ## Changelog / 변경 사항
-### v26.1-1.2.0
+### v26.1.2-1.2.0
 - Added `/openvscode` command to open current world's datapack folder directly in Visual Studio Code (requires `code` command in PATH).
 - Added '/copypos lookat' subcommand to copy coordinates of the block the player is currently looking at.
     - `/copypos` is same as `/copypos me` for backward compatibility.
