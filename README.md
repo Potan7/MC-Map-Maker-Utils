@@ -22,6 +22,9 @@
     *   **KR**: 레지스트리 수정 시 발생하는 '실험적 설정' 경고창에 '이번 세션 무시' 버튼을 추가합니다. 버튼을 누르면 게임 재부팅 전까지 해당 맵에서 경고창이 더 이상 뜨지 않습니다.
 
 ### Workflow Tools / 작업 효율 도구
+*   **`/dialogeditor [dialogId]`** (after 1.2.0)
+    *   **EN**: Opens an in-game editor for creating a new Dialog or editing an existing Dialog by ID. Supports all Minecraft 26.1.2 Dialog types, validates and normalizes input values, saves the JSON into a world data pack, and applies changes immediately through registry hot-swapping.
+    *   **KR**: 새로운 Dialog를 만들거나 ID로 기존 Dialog를 편집할 수 있는 인게임 편집기를 엽니다. Minecraft 26.1.2의 모든 Dialog 유형을 지원하며, 입력값을 검증 및 보정하고 월드 데이터팩에 JSON을 저장한 뒤 레지스트리 hot-swap을 통해 변경사항을 즉시 적용합니다.
 *   **`/openpackfolder`**
     *   **EN**: (Singleplayer Only) Instantly opens the `datapacks` folder of the current world in your OS file explorer.
     *   **KR**: (싱글플레이 전용) 현재 월드의 `datapacks` 폴더를 파일 탐색기로 즉시 엽니다.
@@ -55,6 +58,11 @@ This mod is available under the **MIT License**.
 
 ## Changelog / 변경 사항
 ### v26.1.2-1.2.0
+- Added `/dialogeditor [dialogId]`, an in-game editor for creating and editing Minecraft 26.1.2 Dialog JSON files.
+    - Supports `notice`, `confirmation`, `multi_action`, `server_links`, and `dialog_list`.
+    - Supports body elements, input controls, actions, and inline or referenced dialogs.
+    - Validates and normalizes values before exporting JSON.
+    - Saves Dialog files into a selected world data pack and hot-swaps them into the running singleplayer world.
 - Added `/openvscode` command to open current world's datapack folder directly in Visual Studio Code (requires `code` command in PATH).
 - Added '/copypos lookat' subcommand to copy coordinates of the block the player is currently looking at.
     - `/copypos` is same as `/copypos me` for backward compatibility.
