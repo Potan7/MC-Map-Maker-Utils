@@ -28,6 +28,13 @@ loom {
 		}
 	}
 
+	runs {
+		client {
+			if (project.hasProperty("dialogE2E")) {
+				vmArg "-Dmapmakerutils.dialogE2E=true"
+			}
+		}
+	}
 }
 
 dependencies {
@@ -109,13 +116,15 @@ tasks.register('inspectClasspath') {
 							zip.entries().each { entry ->
 								if (entry.name.endsWith(".class")) {
 									String className = entry.name.replace("/", ".").replace(".class", "")
-									if (className.equals("net.minecraft.client.gui.components.CommandSuggestions")) {
+									if (className.equals("net.minecraft.client.gui.screens.worldselection.WorldOpenFlows")) {
 										println "Class: ${className}"
 										def reader = new org.objectweb.asm.ClassReader(zip.getInputStream(entry))
 										reader.accept(new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9) {
 											@Override
 											org.objectweb.asm.MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-												println "  [${className}] - Method: ${name} ${descriptor}"
+												if (!name.contains("\$")) {
+													println "  [${className}] - Method: ${name} ${descriptor}"
+												}
 												return null
 											}
 										}, 0)
