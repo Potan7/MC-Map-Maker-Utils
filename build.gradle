@@ -38,7 +38,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	
+
 }
 
 processResources {
@@ -87,5 +87,42 @@ publishing {
 		// Notice: This block does NOT have the same function as the block in the top level.
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
+	}
+}
+
+tasks.register('inspectClasspath') {
+	doLast {
+		println "=== INSPECTING CLASS METHODS ==="
+		project.configurations.each { config ->
+			if (config.canBeResolved) {
+				config.each { file ->
+					if (file.name.contains("minecraft") || file.name.contains("mapped") || file.name.contains("client") || file.name.contains("merged")) {
+						try {
+							def zip = new java.util.zip.ZipFile(file)
+							zip.entries().each { entry ->
+								if (entry.name.endsWith(".class")) {
+									String className = entry.name.replace("/", ".").replace(".class", "")
+									if (className.equals("net.minecraft.client.gui.screens.worldselection.WorldOpenFlows")) {
+										println "Class: ${className}"
+										def reader = new org.objectweb.asm.ClassReader(zip.getInputStream(entry))
+										reader.accept(new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9) {
+											@Override
+											org.objectweb.asm.MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+												if (!name.contains("\$")) {
+													println "  [${className}] - Method: ${name} ${descriptor}"
+												}
+												return null
+											}
+										}, 0)
+									}
+								}
+							}
+						} catch (Exception e) {
+							// ignore
+						}
+					}
+				}
+			}
+		}
 	}
 }

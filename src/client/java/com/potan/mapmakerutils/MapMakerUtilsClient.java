@@ -2,8 +2,6 @@ package com.potan.mapmakerutils;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -17,6 +15,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.potan.mapmakerutils.screen.DialogEditorScreen;
+import com.potan.mapmakerutils.util.DialogJsonGenerator;
+import com.potan.mapmakerutils.util.DialogDatapackManager;
+import java.nio.file.Files;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.resources.Identifier;
 
 public class MapMakerUtilsClient implements ClientModInitializer {
 	@Override
@@ -31,15 +40,147 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copypos").executes(this::copyPos));
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copypos")
+				.executes(this::copyPos)
+				.then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("me").executes(this::copyPos))
+				.then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("lookat").executes(this::copyLookAtPos)));
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("copyrot").executes(this::copyRot));
 		});
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("openvscode").executes(this::openWithVSCode));
+		});
+
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("dialogeditor")
+				.executes(this::openEditorEmpty)
+				.then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("dialogId", StringArgumentType.greedyString())
+					.suggests((context, builder) -> {
+						String remaining = builder.getRemaining().toLowerCase();
+						for (String id : DialogDatapackManager.scanExistingDialogs(Minecraft.getInstance().getSingleplayerServer())) {
+							if (id.toLowerCase().startsWith(remaining)) {
+								builder.suggest(id);
+							}
+						}
+						return builder.buildFuture();
+					})
+					.executes(this::openEditorExisting)));
+		});
+
 	}
+
+	int openEditorEmpty(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		mc.execute(() -> {
+			mc.setScreen(new DialogEditorScreen(null));
+		});
+		return Command.SINGLE_SUCCESS;
+	}
+
+	int openEditorExisting(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		String dialogIdStr = StringArgumentType.getString(context, "dialogId");
+
+		Identifier dialogId;
+		try {
+			dialogId = Identifier.parse(dialogIdStr);
+		} catch (Exception e) {
+			context.getSource().sendError(Component.literal("§cInvalid dialog ID format. Must be namespace:id"));
+			return 0;
+		}
+
+		String namespace = dialogId.getNamespace();
+		String filename = dialogId.getPath();
+
+		final String finalNamespace = namespace;
+		final String finalFilename = filename;
+
+		IntegratedServer server = mc.getSingleplayerServer();
+		if (server != null) {
+			try {
+				Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
+				File dialogFile = null;
+				File[] datapacks = datapackDir.toFile().listFiles();
+				String datapackName = "mapmakerutils_generated";
+				long latestTime = -1;
+				if (datapacks != null) {
+					for (File dp : datapacks) {
+						if (dp.isDirectory()) {
+							File targetFile = new File(dp, "data/" + finalNamespace + "/dialog/" + finalFilename + ".json");
+							if (targetFile.exists()) {
+								if (targetFile.lastModified() > latestTime) {
+									latestTime = targetFile.lastModified();
+									dialogFile = targetFile;
+									datapackName = dp.getName();
+								}
+							}
+						}
+					}
+				}
+
+				final String finalDatapackName = datapackName;
+				if (dialogFile != null && dialogFile.exists()) {
+					String json = Files.readString(dialogFile.toPath());
+					DialogJsonGenerator.DialogModel model = DialogJsonGenerator.deserialize(json);
+					mc.execute(() -> {
+						mc.setScreen(new DialogEditorScreen(model, finalNamespace, finalFilename, finalDatapackName));
+					});
+				} else {
+					mc.execute(() -> {
+						mc.setScreen(new DialogEditorScreen(null, finalNamespace, finalFilename, finalDatapackName));
+					});
+				}
+			} catch (Exception e) {
+				context.getSource().sendError(Component.literal("§cError reading dialog file: " + e.getMessage()));
+				return 0;
+			}
+		} else {
+			context.getSource().sendError(Component.translatable("mapmakerutils.error.singleplayer_only"));
+			return 0;
+		}
+
+		return Command.SINGLE_SUCCESS;
+	}
+
+	int openWithVSCode(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		IntegratedServer server = mc.getSingleplayerServer();
+
+		if (server != null) {
+			try {
+				Path datapckPath = server.getWorldPath(LevelResource.DATAPACK_DIR).toAbsolutePath().normalize();
+				
+				// Security check: Verify that the path is strictly inside the game's saves directory
+				Path savesDir = mc.gameDirectory.toPath().resolve("saves").toAbsolutePath().normalize();
+				if (!datapckPath.startsWith(savesDir)) {
+					context.getSource().sendError(Component.literal("§cSecurity Error: Datapack directory is outside the game's saves folder!"));
+					return 0;
+				}
+
+				File file = datapckPath.toFile();
+				if (!file.exists()) file.mkdirs();
+
+				String path = file.getAbsolutePath();
+				
+				// Execute VS Code directly without 'cmd.exe /c' wrapper to prevent shell command injection
+				ProcessBuilder pb = new ProcessBuilder("code", path);
+				pb.start();
+				context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.vscode_opening"));
+			} catch (Exception e) {
+				context.getSource().sendError(Component.translatable("mapmakerutils.error.vscode_failed"));
+				return 0;
+			}
+		} else {
+			context.getSource().sendError(Component.translatable("mapmakerutils.error.singleplayer_only"));
+			return 0;
+		}
+		return Command.SINGLE_SUCCESS;
+	}
+
 	int openDatapackFolder(CommandContext<FabricClientCommandSource> context) {
-		// Open the datapack folder of the current singleplayer world
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -69,8 +210,6 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int hardReload(CommandContext<FabricClientCommandSource> context) {
-		// Reload the current singleplayer world
-
 		Minecraft mc = Minecraft.getInstance();
 		IntegratedServer server = mc.getSingleplayerServer();
 
@@ -87,14 +226,10 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	}
 
 	int copyPos(CommandContext<FabricClientCommandSource> context) {
-		// Copy player position to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			BlockPos pos = mc.player.blockPosition();
-			int x = pos.getX();
-			int y = pos.getY();
-			int z = pos.getZ();
-			String posString = x + " " + y + " " + z;
+			String posString = pos.getX() + " " + pos.getY() + " " + pos.getZ();
 			mc.keyboardHandler.setClipboard(posString);
 			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.position_copied", posString));
 			return Command.SINGLE_SUCCESS;
@@ -102,8 +237,23 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 		return 0;
 	}
 
+	int copyLookAtPos(CommandContext<FabricClientCommandSource> context) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK) {
+			BlockHitResult blockHit = (BlockHitResult) mc.hitResult;
+			BlockPos pos = blockHit.getBlockPos();
+			String posString = pos.getX() + " " + pos.getY() + " " + pos.getZ();
+
+			mc.keyboardHandler.setClipboard(posString);
+			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.lookat_position_copied", posString));
+			return Command.SINGLE_SUCCESS;
+		} else {
+			context.getSource().sendError(Component.translatable("mapmakerutils.error.no_block_looked_at"));
+			return 0;
+		}
+	}
+
 	int copyRot(CommandContext<FabricClientCommandSource> context) {
-		// Copy player rotation to clipboard
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player != null) {
 			float yaw = mc.player.getYRot();
@@ -113,7 +263,6 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 			context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.rotation_copied", rotString));
 			return Command.SINGLE_SUCCESS;
 		}
-
 		return 0;
 	}
 }
