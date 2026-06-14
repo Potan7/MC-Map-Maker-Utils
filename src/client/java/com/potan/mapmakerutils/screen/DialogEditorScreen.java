@@ -212,7 +212,7 @@ public class DialogEditorScreen extends Screen {
         }).bounds(splitX / 2 + 5, 200, (splitX - 25) / 2, 14).build();
         this.addWidgetToMain(addInputBtn);
 
-        editActionsBtn = Button.builder(Component.literal("Edit Footer Actions"), b -> {
+        editActionsBtn = Button.builder(Component.literal("Edit Actions"), b -> {
             state = ScreenState.EDIT_ACTIONS;
             init();
         }).bounds(10, 220, splitX - 20, 14).build();
