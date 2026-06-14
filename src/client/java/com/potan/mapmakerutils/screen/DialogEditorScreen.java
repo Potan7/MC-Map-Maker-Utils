@@ -3,6 +3,8 @@ package com.potan.mapmakerutils.screen;
 import com.potan.mapmakerutils.ModGlobalState;
 import com.potan.mapmakerutils.util.DialogJsonGenerator;
 import com.potan.mapmakerutils.util.DialogJsonGenerator.*;
+import com.potan.mapmakerutils.util.DialogEditorValidator;
+import com.potan.mapmakerutils.util.DialogDatapackManager;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -31,10 +33,13 @@ import net.minecraft.resources.ResourceKey;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.FileReader;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DialogEditorScreen extends Screen {
 
@@ -69,6 +74,8 @@ public class DialogEditorScreen extends Screen {
     private Button copyJsonBtn;
     private Button saveBtn;
     private Button showBtn;
+    private EditBox actionColumnsField;
+    private EditBox actionButtonWidthField;
 
     private final java.util.List<Button> bodyEditButtons = new java.util.ArrayList<>();
     private final java.util.List<Button> bodyDeleteButtons = new java.util.ArrayList<>();
@@ -97,6 +104,8 @@ public class DialogEditorScreen extends Screen {
     private final List<net.minecraft.client.gui.components.AbstractWidget> listWidgets = new ArrayList<>();
     private final List<net.minecraft.client.gui.components.AbstractWidget> actionsWidgets = new ArrayList<>();
     private final List<String> existingDialogsList = new ArrayList<>();
+    private String editorMessage = "";
+    private boolean editorMessageIsError = false;
 
     public DialogEditorScreen(DialogModel model) {
         super(Component.literal("Dialog Editor"));
@@ -123,6 +132,8 @@ public class DialogEditorScreen extends Screen {
         this.subWidgets.clear();
         this.listWidgets.clear();
         this.actionsWidgets.clear();
+        this.actionColumnsField = null;
+        this.actionButtonWidthField = null;
 
         bodyEditButtons.clear();
         bodyDeleteButtons.clear();
@@ -134,14 +145,17 @@ public class DialogEditorScreen extends Screen {
         // --- 1. MAIN STATE WIDGETS ---
         namespaceField = new EditBox(this.font, 10, 20, (splitX - 30) / 2, 14, Component.translatable("mapmakerutils.ui.editor.namespace"));
         namespaceField.setValue(this.namespace);
+        namespaceField.setResponder(val -> this.namespace = val);
         this.addWidgetToMain(namespaceField);
 
         filenameField = new EditBox(this.font, splitX / 2 + 5, 20, (splitX - 30) / 2, 14, Component.translatable("mapmakerutils.ui.editor.filename"));
         filenameField.setValue(this.filename);
+        filenameField.setResponder(val -> this.filename = val);
         this.addWidgetToMain(filenameField);
 
         datapackField = new EditBox(this.font, 10, 50, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.datapack_folder"));
         datapackField.setValue(this.datapackName);
+        datapackField.setResponder(val -> this.datapackName = val);
         this.addWidgetToMain(datapackField);
 
         titleField = new EditBox(this.font, 10, 80, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.title"));
@@ -274,6 +288,7 @@ public class DialogEditorScreen extends Screen {
         // Footer Actions
         int footerBtnWidth = (splitX - 30) / 3;
         copyJsonBtn = Button.builder(Component.literal("Copy Inline JSON"), b -> {
+            if (!validateForExport()) return;
             String json = DialogJsonGenerator.serialize(model, false);
             this.minecraft.keyboardHandler.setClipboard(json);
             if (this.minecraft.player != null) {
@@ -379,23 +394,33 @@ public class DialogEditorScreen extends Screen {
                 addButtonWithAction(splitX, currentY, "mapmakerutils.ui.editor.action.edit_exit", model.exitAction);
                 currentY += 22;
                 
-                EditBox colBox = new EditBox(this.font, 10, currentY, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.field.columns"));
-                colBox.setHint(Component.translatable("mapmakerutils.ui.editor.field.columns_hint"));
-                colBox.setValue(String.valueOf(model.columns));
-                colBox.setResponder(val -> {
-                    try { model.columns = Integer.parseInt(val); } catch (Exception e) { model.columns = 2; }
+                actionColumnsField = new EditBox(this.font, 10, currentY, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.field.columns"));
+                actionColumnsField.setHint(Component.translatable("mapmakerutils.ui.editor.field.columns_hint"));
+                actionColumnsField.setValue(String.valueOf(model.columns));
+                actionColumnsField.setResponder(val -> {
+                    try {
+                        int parsed = Integer.parseInt(val.trim());
+                        if (parsed >= 1) {
+                            model.columns = parsed;
+                        }
+                    } catch (NumberFormatException ignored) {}
                 });
-                this.addWidgetToActions(colBox);
+                this.addWidgetToActions(actionColumnsField);
                 currentY += 20;
                 
                 if (model.type.equals("minecraft:server_links") || model.type.equals("minecraft:dialog_list")) {
-                    EditBox widthBox = new EditBox(this.font, 10, currentY, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.field.button_width"));
-                    widthBox.setHint(Component.translatable("mapmakerutils.ui.editor.field.button_width_hint"));
-                    widthBox.setValue(String.valueOf(model.buttonWidth));
-                    widthBox.setResponder(val -> {
-                        try { model.buttonWidth = Integer.parseInt(val); } catch (Exception e) { model.buttonWidth = 150; }
+                    actionButtonWidthField = new EditBox(this.font, 10, currentY, splitX - 20, 14, Component.translatable("mapmakerutils.ui.editor.field.button_width"));
+                    actionButtonWidthField.setHint(Component.translatable("mapmakerutils.ui.editor.field.button_width_hint"));
+                    actionButtonWidthField.setValue(String.valueOf(model.buttonWidth));
+                    actionButtonWidthField.setResponder(val -> {
+                        try {
+                            int parsed = Integer.parseInt(val.trim());
+                            if (parsed >= 1) {
+                                model.buttonWidth = parsed;
+                            }
+                        } catch (NumberFormatException ignored) {}
                     });
-                    this.addWidgetToActions(widthBox);
+                    this.addWidgetToActions(actionButtonWidthField);
                     currentY += 20;
                 }
                 
@@ -443,9 +468,11 @@ public class DialogEditorScreen extends Screen {
                     
                     Button addDialogBtn = Button.builder(Component.literal("Add"), b -> {
                         String newId = newDialogBox.getValue().trim();
-                        if (!newId.isEmpty()) {
+                        if (DialogEditorValidator.isValidIdentifier(newId) || DialogEditorValidator.isJsonObject(newId)) {
                             model.dialogs.add(newId);
                             init();
+                        } else {
+                            error("Enter a valid dialog ID or inline dialog object.");
                         }
                     }).bounds(splitX - 55, currentY, 45, 14).build();
                     this.addWidgetToActions(addDialogBtn);
@@ -472,6 +499,7 @@ public class DialogEditorScreen extends Screen {
             }
             
             Button actionsBackBtn = Button.builder(Component.literal("Back to Main"), b -> {
+                applyActionEditorValues();
                 state = ScreenState.MAIN;
                 init();
             }).bounds(10, this.height - 25, splitX - 20, 18).build();
@@ -580,6 +608,10 @@ public class DialogEditorScreen extends Screen {
         switch (model.afterAction) {
             case "close":
                 model.afterAction = "none";
+                if (model.pause) {
+                    model.pause = false;
+                    warn("After action 'none' requires pause=false; pause was disabled.");
+                }
                 break;
             case "none":
                 model.afterAction = "wait_for_response";
@@ -623,9 +655,7 @@ public class DialogEditorScreen extends Screen {
             
             String nextType = "close";
             switch (cleanType != null ? cleanType : "") {
-                case "close": nextType = "none"; break;
-                case "none": nextType = "wait_for_response"; break;
-                case "wait_for_response": nextType = "open_url"; break;
+                case "close", "none", "wait_for_response": nextType = "open_url"; break;
                 case "open_url": nextType = "run_command"; break;
                 case "run_command": nextType = "suggest_command"; break;
                 case "suggest_command": nextType = "change_page"; break;
@@ -639,7 +669,7 @@ public class DialogEditorScreen extends Screen {
             
             if (nextType.equals("open_url") || nextType.equals("run_command") || nextType.equals("suggest_command") ||
                 nextType.equals("change_page") || nextType.equals("copy_to_clipboard") || nextType.equals("show_dialog") ||
-                nextType.equals("custom") || nextType.equals("close") || nextType.equals("none") || nextType.equals("wait_for_response")) {
+                nextType.equals("custom") || nextType.equals("close")) {
                 selectedClickAction.action.type = "minecraft:" + nextType;
             } else {
                 selectedClickAction.action.type = nextType;
@@ -755,8 +785,8 @@ public class DialogEditorScreen extends Screen {
                 setupField(editBox4, "mapmakerutils.ui.editor.field.label_format", input.labelFormat);
                 setupField(editBox5, "mapmakerutils.ui.editor.field.start", String.valueOf(input.start));
                 setupField(editBox6, "mapmakerutils.ui.editor.field.end", String.valueOf(input.end));
-                setupField(editBox7, "mapmakerutils.ui.editor.field.step", String.valueOf(input.step));
-                setupField(editBox8, "mapmakerutils.ui.editor.field.initial_value", String.valueOf(input.initialFloat));
+                setupField(editBox7, "mapmakerutils.ui.editor.field.step", input.step == null ? "" : String.valueOf(input.step));
+                setupField(editBox8, "mapmakerutils.ui.editor.field.initial_value", input.initialFloat == null ? "" : String.valueOf(input.initialFloat));
             }
 
         } else if (state == ScreenState.EDIT_SINGLE_ACTION && selectedClickAction != null) {
@@ -805,32 +835,33 @@ public class DialogEditorScreen extends Screen {
 
     private void applySubEditorValues() {
         if (state == ScreenState.MAIN) return;
+        clearEditorMessage();
 
         if (state == ScreenState.EDIT_BODY && selectedElementIndex >= 0) {
             BodyElement elem = model.body.get(selectedElementIndex);
             if (elem.type.equals("minecraft:plain_message")) {
                 elem.contents = editBox1.getValue();
-                try { elem.width = Integer.parseInt(editBox2.getValue()); } catch (Exception e) { elem.width = 200; }
+                elem.width = readClampedInt(editBox2, 200, 1, 1024, "Message width");
             } else if (elem.type.equals("minecraft:item")) {
                 elem.itemId = editBox1.getValue();
-                try { elem.itemCount = Integer.parseInt(editBox2.getValue()); } catch (Exception e) { elem.itemCount = 1; }
+                elem.itemCount = readClampedInt(editBox2, 1, 1, 99, "Item count");
                 elem.itemComponents = editBox3.getValue();
                 elem.description = editBox4.getValue();
-                try { elem.itemWidth = Integer.parseInt(editBox5.getValue()); } catch (Exception e) { elem.itemWidth = 16; }
-                try { elem.itemHeight = Integer.parseInt(editBox6.getValue()); } catch (Exception e) { elem.itemHeight = 16; }
+                elem.itemWidth = readClampedInt(editBox5, 16, 1, 256, "Item width");
+                elem.itemHeight = readClampedInt(editBox6, 16, 1, 256, "Item height");
             }
         } else if (state == ScreenState.EDIT_INPUT && selectedElementIndex >= 0) {
             InputControl input = model.inputs.get(selectedElementIndex);
             input.key = editBox1.getValue();
             input.label = editBox2.getValue();
-            try { input.width = Integer.parseInt(editBox3.getValue()); } catch (Exception e) { input.width = 200; }
+            input.width = readClampedInt(editBox3, 200, 1, 1024, "Input width");
 
             if (input.type.equals("minecraft:text")) {
                 input.initialText = editBox4.getValue();
-                try { input.maxLength = Integer.parseInt(editBox5.getValue()); } catch (Exception e) { input.maxLength = 32; }
+                input.maxLength = readClampedInt(editBox5, 32, 1, Integer.MAX_VALUE, "Maximum length");
                 if (input.multiline) {
-                    try { input.maxLines = Integer.parseInt(editBox6.getValue()); } catch (Exception e) { input.maxLines = 0; }
-                    try { input.multilineHeight = Integer.parseInt(editBox7.getValue()); } catch (Exception e) { input.multilineHeight = 0; }
+                    input.maxLines = readOptionalPositiveInt(editBox6, "Maximum lines");
+                    input.multilineHeight = readOptionalClampedInt(editBox7, 1, 512, "Multiline height");
                 }
             } else if (input.type.equals("minecraft:boolean")) {
                 input.onTrue = editBox4.getValue();
@@ -849,16 +880,16 @@ public class DialogEditorScreen extends Screen {
                 }
             } else if (input.type.equals("minecraft:number_range")) {
                 input.labelFormat = editBox4.getValue();
-                try { input.start = Float.parseFloat(editBox5.getValue()); } catch (Exception e) { input.start = 0f; }
-                try { input.end = Float.parseFloat(editBox6.getValue()); } catch (Exception e) { input.end = 10f; }
-                try { input.step = Float.parseFloat(editBox7.getValue()); } catch (Exception e) { input.step = 1f; }
-                try { input.initialFloat = Float.parseFloat(editBox8.getValue()); } catch (Exception e) { input.initialFloat = 0f; }
+                input.start = readFloat(editBox5, 0f, "Range start");
+                input.end = readFloat(editBox6, 10f, "Range end");
+                input.step = readOptionalPositiveFloat(editBox7, "Range step");
+                input.initialFloat = readOptionalRangeFloat(editBox8, input.start, input.end, "Initial range value");
             }
 
         } else if (state == ScreenState.EDIT_SINGLE_ACTION && selectedClickAction != null) {
             selectedClickAction.label = editBox1.getValue();
             selectedClickAction.tooltip = editBox2.getValue();
-            try { selectedClickAction.width = Integer.parseInt(editBox3.getValue()); } catch (Exception e) { selectedClickAction.width = 150; }
+            selectedClickAction.width = readClampedInt(editBox3, 150, 1, 1024, "Button width");
 
             String actType = selectedClickAction.action.type;
             String cleanType = actType;
@@ -871,7 +902,7 @@ public class DialogEditorScreen extends Screen {
             } else if ("run_command".equals(cleanType) || "suggest_command".equals(cleanType)) {
                 selectedClickAction.action.command = editBox4.getValue();
             } else if ("change_page".equals(cleanType)) {
-                try { selectedClickAction.action.page = Integer.parseInt(editBox4.getValue()); } catch (Exception e) { selectedClickAction.action.page = 1; }
+                selectedClickAction.action.page = readClampedInt(editBox4, 1, 1, Integer.MAX_VALUE, "Page number");
             } else if ("copy_to_clipboard".equals(cleanType)) {
                 selectedClickAction.action.copyValue = editBox4.getValue();
             } else if ("show_dialog".equals(cleanType)) {
@@ -893,6 +924,93 @@ public class DialogEditorScreen extends Screen {
         }
     }
 
+    private void applyActionEditorValues() {
+        clearEditorMessage();
+        if (actionColumnsField != null) {
+            model.columns = readClampedInt(actionColumnsField, 2, 1, Integer.MAX_VALUE, "Columns");
+        }
+        if (actionButtonWidthField != null) {
+            model.buttonWidth = readClampedInt(actionButtonWidthField, 150, 1, 1024, "Button width");
+        }
+    }
+
+    private int readClampedInt(EditBox field, int fallback, int min, int max, String name) {
+        int entered;
+        try {
+            entered = Integer.parseInt(field.getValue());
+        } catch (Exception e) {
+            field.setValue(String.valueOf(fallback));
+            warn(name + " was invalid and was reset to " + fallback + ".");
+            return fallback;
+        }
+        int corrected = Math.max(min, Math.min(max, entered));
+        if (corrected != entered) {
+            field.setValue(String.valueOf(corrected));
+            warn(name + " must be between " + min + " and " + max + "; changed to " + corrected + ".");
+        }
+        return corrected;
+    }
+
+    private int readOptionalPositiveInt(EditBox field, String name) {
+        if (field.getValue().isBlank()) return 0;
+        return readClampedInt(field, 1, 1, Integer.MAX_VALUE, name);
+    }
+
+    private int readOptionalClampedInt(EditBox field, int min, int max, String name) {
+        if (field.getValue().isBlank()) return 0;
+        return readClampedInt(field, min, min, max, name);
+    }
+
+    private float readFloat(EditBox field, float fallback, String name) {
+        try {
+            float value = Float.parseFloat(field.getValue());
+            if (Float.isFinite(value)) return value;
+        } catch (Exception ignored) {
+        }
+        field.setValue(String.valueOf(fallback));
+        warn(name + " was invalid and was reset to " + fallback + ".");
+        return fallback;
+    }
+
+    private Float readOptionalPositiveFloat(EditBox field, String name) {
+        if (field.getValue().isBlank()) return null;
+        float value = readFloat(field, 1f, name);
+        if (value > 0) return value;
+        field.setValue("1.0");
+        warn(name + " must be greater than 0; changed to 1.0.");
+        return 1f;
+    }
+
+    private Float readOptionalRangeFloat(EditBox field, float start, float end, String name) {
+        if (field.getValue().isBlank()) return null;
+        float value = readFloat(field, (start + end) / 2f, name);
+        float min = Math.min(start, end);
+        float max = Math.max(start, end);
+        float corrected = Math.max(min, Math.min(max, value));
+        if (corrected != value) {
+            field.setValue(String.valueOf(corrected));
+            warn(name + " must be inside the range; changed to " + corrected + ".");
+        }
+        return corrected;
+    }
+
+    private void warn(String message) {
+        if (editorMessage.isEmpty() || !editorMessageIsError) {
+            editorMessage = message;
+            editorMessageIsError = false;
+        }
+    }
+
+    private void error(String message) {
+        editorMessage = message;
+        editorMessageIsError = true;
+    }
+
+    private void clearEditorMessage() {
+        editorMessage = "";
+        editorMessageIsError = false;
+    }
+
     private boolean saveToDatapack() {
         this.namespace = namespaceField.getValue().trim();
         this.filename = filenameField.getValue().trim();
@@ -902,85 +1020,81 @@ public class DialogEditorScreen extends Screen {
         }
 
         if (this.namespace.isEmpty() || this.filename.isEmpty()) {
+            error("Namespace and filename cannot be empty.");
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Namespace and Filename cannot be empty!"));
             }
             return false;
         }
 
+        // Security check: restrict namespace, filename, and datapackName to safe characters to prevent directory traversal
+        if (!this.namespace.matches("^[a-z0-9_.-]+$") || !this.filename.matches("^[a-z0-9_.-]+$")) {
+            error("Namespace and filename must use lowercase letters, numbers, underscores, hyphens, or periods.");
+            if (this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Namespace and Filename must be lowercase alphanumeric, underscores, hyphens, or periods!"));
+            }
+            return false;
+        }
+        if (!this.datapackName.matches("^[a-zA-Z0-9_.-]+$")) {
+            error("Datapack name contains invalid characters.");
+            if (this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Datapack name must be alphanumeric, underscores, hyphens, or periods!"));
+            }
+            return false;
+        }
+
+        if (!validateForExport()) {
+            return false;
+        }
+
         IntegratedServer server = this.minecraft.getSingleplayerServer();
         if (server == null) {
+            error("Saving dialogs is available in singleplayer worlds only.");
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Singleplayer only!"));
             }
             return false;
         }
 
-        try {
-            Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
-            Path targetDatapack = datapackDir.resolve(this.datapackName);
-            Path dialogDir = targetDatapack.resolve("data").resolve(this.namespace).resolve("dialog");
-            
-            Files.createDirectories(dialogDir);
+        DialogDatapackManager.SaveResult result = DialogDatapackManager.saveToDatapack(
+            server,
+            this.namespace,
+            this.filename,
+            this.datapackName,
+            model
+        );
 
-            // Write pack.mcmeta if not present
-            Path mcmeta = targetDatapack.resolve("pack.mcmeta");
-            if (!Files.exists(mcmeta)) {
-                String desc = "{\"pack\":{\"pack_format\":61,\"description\":\"Generated by MapMakerUtils Dialog Editor\"}}";
-                Files.writeString(mcmeta, desc);
-            }
-
-            Path targetFile = dialogDir.resolve(this.filename + ".json");
-            String json = DialogJsonGenerator.serialize(model, true);
-            Files.writeString(targetFile, json);
-
-            // Hot-swap in-memory registry
-            boolean hotSwapped = false;
-            String hotSwapError = null;
-            try {
-                com.google.gson.JsonElement jsonElement = com.google.gson.JsonParser.parseString(json);
-                com.mojang.serialization.DataResult<net.minecraft.core.Holder<net.minecraft.server.dialog.Dialog>> parseResult = net.minecraft.server.dialog.Dialog.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, jsonElement);
-                net.minecraft.core.Holder<net.minecraft.server.dialog.Dialog> dialogHolder = parseResult.getOrThrow(msg -> new RuntimeException("Failed to parse Dialog: " + msg));
-                net.minecraft.server.dialog.Dialog parsedDialog = dialogHolder.value();
-                
-                String dialogIdStr = this.namespace + ":" + this.filename;
-                
-                // 1. Hot-swap server registry
-                net.minecraft.core.Registry<net.minecraft.server.dialog.Dialog> dialogRegistry = server.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DIALOG);
-                hotSwapRegistry(dialogRegistry, json, parsedDialog, dialogIdStr);
-                
-                // 2. Hot-swap client registry
-                try {
-                    net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                    if (mc.level != null) {
-                        net.minecraft.core.Registry<net.minecraft.server.dialog.Dialog> clientRegistry = 
-                            mc.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DIALOG);
-                        hotSwapRegistry(clientRegistry, json, parsedDialog, dialogIdStr);
-                    }
-                } catch (Exception ce) {
-                    // ignore client registry hot-swap failure
-                }
-                
-                hotSwapped = true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                hotSwapError = e.getMessage();
-            }
-
+        if (!result.isSuccess()) {
+            error(result.getErrorMessage());
             if (this.minecraft.player != null) {
-                if (hotSwapped) {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§a[MapMakerUtils] Dialog saved and hot-swapped successfully to " + this.namespace + ":" + this.filename));
-                } else {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§e[MapMakerUtils] Dialog saved to " + this.namespace + ":" + this.filename + ", but hot-swap failed: " + hotSwapError));
-                }
-            }
-            return true;
-        } catch (Exception e) {
-            if (this.minecraft.player != null) {
-                this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Failed to save file: " + e.getMessage()));
+                this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] " + result.getErrorMessage()));
             }
             return false;
         }
+
+        if (this.minecraft.player != null) {
+            String dialogIdStr = this.namespace + ":" + this.filename;
+            if (result.isHotSwapped()) {
+                this.minecraft.player.sendSystemMessage(Component.literal("§a[MapMakerUtils] Dialog saved and hot-swapped successfully to " + dialogIdStr));
+            } else {
+                this.minecraft.player.sendSystemMessage(Component.literal("§e[MapMakerUtils] Dialog saved to " + dialogIdStr + ", but hot-swap failed: " + result.getHotSwapError()));
+            }
+        }
+
+        return true;
+    }
+
+    private boolean validateForExport() {
+        clearEditorMessage();
+        DialogEditorValidator.ValidationResult result = DialogEditorValidator.validateForExport(
+            model,
+            this.minecraft.level != null ? this.minecraft.level.registryAccess() : null
+        );
+        if (!result.isValid()) {
+            error(result.getMessage());
+            return false;
+        }
+        return true;
     }
 
     // --- Render Logic (Left GUI list & Right WYSIWYG Live Preview) ---
@@ -1163,6 +1277,14 @@ public class DialogEditorScreen extends Screen {
             this.fixCommandSuggestionsPosition();
             this.commandSuggestions.extractRenderState(guiGraphics, mouseX, mouseY);
         }
+
+        if (!editorMessage.isEmpty()) {
+            int color = editorMessageIsError ? 0xFFFF5555 : 0xFFFFAA00;
+            Component message = Component.literal(editorMessage);
+            int messageWidth = this.font.width(message);
+            guiGraphics.fill(4, this.height - 43, Math.min(this.width - 4, messageWidth + 12), this.height - 29, 0xD0000000);
+            guiGraphics.text(this.font, message, 8, this.height - 40, color);
+        }
     }
 
     private void drawOutline(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
@@ -1192,116 +1314,55 @@ public class DialogEditorScreen extends Screen {
     }
 
     public static List<String> scanExistingDialogs(net.minecraft.client.Minecraft mc) {
-        List<String> list = new ArrayList<>();
-        IntegratedServer server = mc.getSingleplayerServer();
-        if (server == null) return list;
-        try {
-            Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
-            File[] datapacks = datapackDir.toFile().listFiles();
-            if (datapacks != null) {
-                for (File dp : datapacks) {
-                    if (dp.isDirectory()) {
-                        File dataDir = new File(dp, "data");
-                        if (dataDir.exists() && dataDir.isDirectory()) {
-                            File[] namespaces = dataDir.listFiles();
-                            if (namespaces != null) {
-                                for (File ns : namespaces) {
-                                    if (ns.isDirectory()) {
-                                        File dialogDir = new File(ns, "dialog");
-                                        if (dialogDir.exists() && dialogDir.isDirectory()) {
-                                            File[] files = dialogDir.listFiles();
-                                            if (files != null) {
-                                                for (File f : files) {
-                                                    if (f.isFile() && f.getName().endsWith(".json")) {
-                                                        String name = f.getName().substring(0, f.getName().length() - 5);
-                                                        list.add(ns.getName() + ":" + name);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-        return list;
+        return DialogDatapackManager.scanExistingDialogs(mc.getSingleplayerServer());
     }
 
     private void loadDialogById(String dialogId) {
-        String ns = "my_datapack";
-        String fn = dialogId;
-        if (dialogId.contains(":")) {
-            String[] parts = dialogId.split(":", 2);
-            ns = parts[0];
-            fn = parts[1];
-        }
-        
         IntegratedServer server = this.minecraft.getSingleplayerServer();
-        if (server != null) {
-            try {
-                Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
-                File dialogFile = null;
-                File[] datapacks = datapackDir.toFile().listFiles();
-                String detectedDatapackName = "mapmakerutils_generated";
-                long latestTime = -1;
-                if (datapacks != null) {
-                    for (File dp : datapacks) {
-                        if (dp.isDirectory()) {
-                            File targetFile = new File(dp, "data/" + ns + "/dialog/" + fn + ".json");
-                            if (targetFile.exists()) {
-                                if (targetFile.lastModified() > latestTime) {
-                                    latestTime = targetFile.lastModified();
-                                    dialogFile = targetFile;
-                                    detectedDatapackName = dp.getName();
-                                }
-                            }
-                        }
-                    }
-                }
-                if (dialogFile != null && dialogFile.exists()) {
-                    String json = Files.readString(dialogFile.toPath());
-                    DialogModel loadedModel = DialogJsonGenerator.deserialize(json);
-                    
-                    this.namespace = ns;
-                    this.filename = fn;
-                    this.datapackName = detectedDatapackName;
-                    this.model.type = loadedModel.type;
-                    this.model.title = loadedModel.title;
-                    this.model.externalTitle = loadedModel.externalTitle;
-                    this.model.afterAction = loadedModel.afterAction;
-                    this.model.canCloseWithEscape = loadedModel.canCloseWithEscape;
-                    this.model.pause = loadedModel.pause;
-                    this.model.body = loadedModel.body;
-                    this.model.inputs = loadedModel.inputs;
-                    this.model.noticeAction = loadedModel.noticeAction;
-                    this.model.confirmYes = loadedModel.confirmYes;
-                    this.model.confirmNo = loadedModel.confirmNo;
-                    this.model.actions = loadedModel.actions;
-                    this.model.columns = loadedModel.columns;
-                    this.model.exitAction = loadedModel.exitAction;
-                    this.model.buttonWidth = loadedModel.buttonWidth;
-                    this.model.dialogs = loadedModel.dialogs;
-                    
-                    if (namespaceField != null) namespaceField.setValue(this.namespace);
-                    if (filenameField != null) filenameField.setValue(this.filename);
-                    if (datapackField != null) datapackField.setValue(this.datapackName);
-                    if (titleField != null) titleField.setValue(this.model.title);
-                    if (externalTitleField != null) externalTitleField.setValue(this.model.externalTitle);
-                    
-                    state = ScreenState.MAIN;
-                    init();
-                }
-            } catch (Exception e) {
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§cFailed to load: " + e.getMessage()));
-                }
+        if (server == null) {
+            if (this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(Component.literal("§cSingleplayer only!"));
             }
+            return;
         }
+
+        DialogDatapackManager.LoadResult result = DialogDatapackManager.loadDialog(server, dialogId);
+        if (!result.isSuccess()) {
+            if (this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(Component.literal("§cFailed to load: " + result.getErrorMessage()));
+            }
+            return;
+        }
+
+        DialogModel loadedModel = result.getModel();
+        this.namespace = result.getNamespace();
+        this.filename = result.getFilename();
+        this.datapackName = result.getDatapackName();
+        this.model.type = loadedModel.type;
+        this.model.title = loadedModel.title;
+        this.model.externalTitle = loadedModel.externalTitle;
+        this.model.afterAction = loadedModel.afterAction;
+        this.model.canCloseWithEscape = loadedModel.canCloseWithEscape;
+        this.model.pause = loadedModel.pause;
+        this.model.body = loadedModel.body;
+        this.model.inputs = loadedModel.inputs;
+        this.model.noticeAction = loadedModel.noticeAction;
+        this.model.confirmYes = loadedModel.confirmYes;
+        this.model.confirmNo = loadedModel.confirmNo;
+        this.model.actions = loadedModel.actions;
+        this.model.columns = loadedModel.columns;
+        this.model.exitAction = loadedModel.exitAction;
+        this.model.buttonWidth = loadedModel.buttonWidth;
+        this.model.dialogs = loadedModel.dialogs;
+        
+        if (namespaceField != null) namespaceField.setValue(this.namespace);
+        if (filenameField != null) filenameField.setValue(this.filename);
+        if (datapackField != null) datapackField.setValue(this.datapackName);
+        if (titleField != null) titleField.setValue(this.model.title);
+        if (externalTitleField != null) externalTitleField.setValue(this.model.externalTitle);
+        
+        state = ScreenState.MAIN;
+        init();
     }
 
     private int getMaxScroll() {
@@ -1532,88 +1593,6 @@ public class DialogEditorScreen extends Screen {
         }
     }
 
-    private void hotSwapRegistry(
-        net.minecraft.core.Registry<net.minecraft.server.dialog.Dialog> registry,
-        String json,
-        net.minecraft.server.dialog.Dialog parsedDialog,
-        String dialogIdStr
-    ) throws Exception {
-        if (registry instanceof net.minecraft.core.MappedRegistry) {
-            net.minecraft.core.MappedRegistry<net.minecraft.server.dialog.Dialog> mappedRegistry = 
-                (net.minecraft.core.MappedRegistry<net.minecraft.server.dialog.Dialog>) registry;
-            
-            java.lang.reflect.Field frozenField = net.minecraft.core.MappedRegistry.class.getDeclaredField("frozen");
-            frozenField.setAccessible(true);
-            boolean wasFrozen = frozenField.getBoolean(mappedRegistry);
-            frozenField.setBoolean(mappedRegistry, false);
-            
-            try {
-                net.minecraft.resources.ResourceKey<net.minecraft.server.dialog.Dialog> resourceKey = net.minecraft.resources.ResourceKey.create(
-                    net.minecraft.core.registries.Registries.DIALOG, 
-                    net.minecraft.resources.Identifier.parse(dialogIdStr)
-                );
-                
-                java.util.Optional<net.minecraft.core.Holder.Reference<net.minecraft.server.dialog.Dialog>> existingHolder = mappedRegistry.get(
-                    net.minecraft.resources.Identifier.parse(dialogIdStr)
-                );
-                
-                if (existingHolder.isPresent()) {
-                    net.minecraft.core.Holder.Reference<net.minecraft.server.dialog.Dialog> holderRef = existingHolder.get();
-                    net.minecraft.server.dialog.Dialog existingValue = holderRef.value();
-
-                    java.lang.reflect.Field toIdField = net.minecraft.core.MappedRegistry.class.getDeclaredField("toId");
-                    toIdField.setAccessible(true);
-                    java.util.Map<net.minecraft.server.dialog.Dialog, java.lang.Integer> toIdMap = 
-                        (java.util.Map<net.minecraft.server.dialog.Dialog, java.lang.Integer>) toIdField.get(mappedRegistry);
-
-                    java.lang.reflect.Field byValueField = net.minecraft.core.MappedRegistry.class.getDeclaredField("byValue");
-                    byValueField.setAccessible(true);
-                    java.util.Map<net.minecraft.server.dialog.Dialog, net.minecraft.core.Holder.Reference<net.minecraft.server.dialog.Dialog>> byValueMap = 
-                        (java.util.Map<net.minecraft.server.dialog.Dialog, net.minecraft.core.Holder.Reference<net.minecraft.server.dialog.Dialog>>) byValueField.get(mappedRegistry);
-
-                    int intId = -1;
-                    if (existingValue != null) {
-                        intId = mappedRegistry.getId(existingValue);
-                    }
-                    if (intId == -1) {
-                        try {
-                            java.lang.reflect.Field byIdField = net.minecraft.core.MappedRegistry.class.getDeclaredField("byId");
-                            byIdField.setAccessible(true);
-                            java.util.List<?> byIdList = (java.util.List<?>) byIdField.get(mappedRegistry);
-                            intId = byIdList.indexOf(holderRef);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                    }
-
-                    if (existingValue != null) {
-                        toIdMap.remove(existingValue);
-                        byValueMap.remove(existingValue);
-                    }
-                    
-                    if (intId != -1) {
-                        toIdMap.put(parsedDialog, intId);
-                    }
-                    byValueMap.put(parsedDialog, holderRef);
-
-                    java.lang.reflect.Field valueField = net.minecraft.core.Holder.Reference.class.getDeclaredField("value");
-                    valueField.setAccessible(true);
-                    valueField.set(holderRef, parsedDialog);
-                } else {
-                    mappedRegistry.register(
-                        resourceKey, 
-                        parsedDialog, 
-                        new net.minecraft.core.RegistrationInfo(
-                            java.util.Optional.empty(), 
-                            com.mojang.serialization.Lifecycle.stable()
-                        )
-                    );
-                }
-            } finally {
-                frozenField.setBoolean(mappedRegistry, wasFrozen);
-            }
-        }
-    }
 
     private void fixCommandSuggestionsPosition() {
         if (this.commandSuggestions == null) return;

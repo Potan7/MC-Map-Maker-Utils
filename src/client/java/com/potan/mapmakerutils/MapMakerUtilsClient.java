@@ -22,6 +22,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.potan.mapmakerutils.screen.DialogEditorScreen;
 import com.potan.mapmakerutils.util.DialogJsonGenerator;
+import com.potan.mapmakerutils.util.DialogDatapackManager;
 import java.nio.file.Files;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.resources.Identifier;
@@ -59,7 +60,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 				.then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("dialogId", StringArgumentType.greedyString())
 					.suggests((context, builder) -> {
 						String remaining = builder.getRemaining().toLowerCase();
-						for (String id : DialogEditorScreen.scanExistingDialogs(Minecraft.getInstance())) {
+						for (String id : DialogDatapackManager.scanExistingDialogs(Minecraft.getInstance().getSingleplayerServer())) {
 							if (id.toLowerCase().startsWith(remaining)) {
 								builder.suggest(id);
 							}
@@ -172,20 +173,22 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 
 		if (server != null) {
 			try {
-				Path datapckPath = server.getWorldPath(LevelResource.DATAPACK_DIR);
+				Path datapckPath = server.getWorldPath(LevelResource.DATAPACK_DIR).toAbsolutePath().normalize();
+				
+				// Security check: Verify that the path is strictly inside the game's saves directory
+				Path savesDir = mc.gameDirectory.toPath().resolve("saves").toAbsolutePath().normalize();
+				if (!datapckPath.startsWith(savesDir)) {
+					context.getSource().sendError(Component.literal("§cSecurity Error: Datapack directory is outside the game's saves folder!"));
+					return 0;
+				}
+
 				File file = datapckPath.toFile();
 				if (!file.exists()) file.mkdirs();
 
 				String path = file.getAbsolutePath();
-				String os = System.getProperty("os.name").toLowerCase();
-				ProcessBuilder pb;
 				
-				if (os.contains("win")) {
-					pb = new ProcessBuilder("cmd.exe", "/c", "code", path);
-				} else {
-					pb = new ProcessBuilder("code", path);
-				}
-				
+				// Execute VS Code directly without 'cmd.exe /c' wrapper to prevent shell command injection
+				ProcessBuilder pb = new ProcessBuilder("code", path);
 				pb.start();
 				context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.vscode_opening"));
 			} catch (Exception e) {

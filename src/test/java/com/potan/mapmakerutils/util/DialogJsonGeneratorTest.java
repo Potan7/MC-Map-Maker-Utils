@@ -4,9 +4,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.potan.mapmakerutils.util.DialogJsonGenerator.*;
-import java.util.List;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.server.dialog.Dialog;
 
 public class DialogJsonGeneratorTest {
+
+    private static JsonObject serializeToObject(DialogModel model) {
+        return JsonParser.parseString(DialogJsonGenerator.serialize(model, false)).getAsJsonObject();
+    }
+
+    private static void assertMinecraftAccepts(DialogModel model) {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        JsonObject json = serializeToObject(model);
+        assertDoesNotThrow(() -> Dialog.DIRECT_CODEC.parse(JsonOps.INSTANCE, json).getOrThrow());
+    }
 
     @Test
     public void testCommonFields() {
@@ -435,5 +451,152 @@ public class DialogJsonGeneratorTest {
         assertEquals("dynamic/custom", loaded.noticeAction.action.type);
         assertEquals("my_dynamic_custom", loaded.noticeAction.action.dynamicCustomId);
         assertTrue(loaded.noticeAction.action.dynamicAdditions.contains("data"));
+    }
+
+    @Test
+    public void testItemUsesShowDecorationsField() {
+        DialogModel model = new DialogModel();
+        BodyElement item = new BodyElement();
+        item.type = "minecraft:item";
+        item.showDecoration = false;
+        model.body.add(item);
+
+        JsonObject body = serializeToObject(model).getAsJsonArray("body").get(0).getAsJsonObject();
+        assertTrue(body.has("show_decorations"));
+        assertFalse(body.has("show_decoration"));
+    }
+
+    @Test
+    public void testAfterActionNoneForcesUnpausedDialog() {
+        DialogModel model = new DialogModel();
+        model.afterAction = "none";
+        model.pause = true;
+
+        JsonObject json = serializeToObject(model);
+        assertEquals("none", json.get("after_action").getAsString());
+        assertFalse(json.get("pause").getAsBoolean());
+    }
+
+    @Test
+    public void testEmptyMultiActionGetsValidFallbackButton() {
+        DialogModel model = new DialogModel();
+        model.type = "minecraft:multi_action";
+
+        JsonObject json = serializeToObject(model);
+        assertEquals(1, json.getAsJsonArray("actions").size());
+    }
+
+    @Test
+    public void testInvalidButtonAfterActionsAreNotSerializedAsActions() {
+        DialogModel model = new DialogModel();
+        model.type = "minecraft:confirmation";
+        model.confirmYes = new ClickAction("Yes", "minecraft:none");
+        model.confirmNo = new ClickAction("No", "minecraft:wait_for_response");
+
+        JsonObject json = serializeToObject(model);
+        assertFalse(json.getAsJsonObject("yes").has("action"));
+        assertFalse(json.getAsJsonObject("no").has("action"));
+    }
+
+    @Test
+    public void testNumberRangePreservesStepOneAndCanOmitStep() {
+        DialogModel model = new DialogModel();
+        InputControl stepped = new InputControl();
+        stepped.type = "minecraft:number_range";
+        stepped.key = "stepped";
+        stepped.label = "Stepped";
+        stepped.step = 1.0f;
+        model.inputs.add(stepped);
+
+        InputControl continuous = new InputControl();
+        continuous.type = "minecraft:number_range";
+        continuous.key = "continuous";
+        continuous.label = "Continuous";
+        continuous.step = null;
+        model.inputs.add(continuous);
+
+        JsonObject json = serializeToObject(model);
+        assertEquals(1.0f, json.getAsJsonArray("inputs").get(0).getAsJsonObject().get("step").getAsFloat());
+        assertFalse(json.getAsJsonArray("inputs").get(1).getAsJsonObject().has("step"));
+    }
+
+    @Test
+    public void testNamespacedActionRoundTripKeepsPayload() {
+        String json = """
+            {
+              "type": "minecraft:notice",
+              "title": "Test",
+              "action": {
+                "label": "Open",
+                "action": {
+                  "type": "minecraft:open_url",
+                  "url": "https://example.com"
+                }
+              }
+            }
+            """;
+
+        DialogModel loaded = DialogJsonGenerator.deserialize(json);
+        JsonObject serialized = serializeToObject(loaded);
+        assertEquals(
+            "https://example.com",
+            serialized.getAsJsonObject("action").getAsJsonObject("action").get("url").getAsString()
+        );
+    }
+
+    @Test
+    public void testBuiltInButtonLabelsUseTranslationComponents() {
+        DialogModel model = new DialogModel();
+        model.type = "minecraft:confirmation";
+
+        JsonObject json = serializeToObject(model);
+        assertEquals("gui.yes", json.getAsJsonObject("yes").getAsJsonObject("label").get("translate").getAsString());
+        assertEquals("gui.no", json.getAsJsonObject("no").getAsJsonObject("label").get("translate").getAsString());
+    }
+
+    @Test
+    public void testMinecraft2612CodecAcceptsNormalizedDialogs() {
+        DialogModel notice = new DialogModel();
+        notice.afterAction = "none";
+        assertMinecraftAccepts(notice);
+
+        DialogModel confirmation = new DialogModel();
+        confirmation.type = "minecraft:confirmation";
+        confirmation.confirmYes = new ClickAction("Yes", "minecraft:none");
+        confirmation.confirmNo = new ClickAction("No", "minecraft:wait_for_response");
+        assertMinecraftAccepts(confirmation);
+
+        DialogModel multiAction = new DialogModel();
+        multiAction.type = "minecraft:multi_action";
+        assertMinecraftAccepts(multiAction);
+
+        DialogModel itemAndRange = new DialogModel();
+        BodyElement item = new BodyElement();
+        item.type = "minecraft:item";
+        item.showDecoration = false;
+        item.itemCount = 999;
+        item.itemWidth = 999;
+        itemAndRange.body.add(item);
+        InputControl range = new InputControl();
+        range.type = "minecraft:number_range";
+        range.key = "";
+        range.label = "Range";
+        range.step = 1.0f;
+        itemAndRange.inputs.add(range);
+        assertMinecraftAccepts(itemAndRange);
+    }
+
+    @Test
+    public void testInvalidActionDataIsOmitted() {
+        DialogModel model = new DialogModel();
+        model.type = "minecraft:confirmation";
+        model.confirmYes = new ClickAction("URL", "minecraft:open_url");
+        model.confirmYes.action.url = "not a url";
+        model.confirmNo = new ClickAction("Custom", "minecraft:custom");
+        model.confirmNo.action.customId = "INVALID ID";
+
+        JsonObject json = serializeToObject(model);
+        assertFalse(json.getAsJsonObject("yes").has("action"));
+        assertFalse(json.getAsJsonObject("no").has("action"));
     }
 }

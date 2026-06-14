@@ -1,6 +1,7 @@
 package com.potan.mapmakerutils.util;
 
 import com.google.gson.*;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,8 +80,8 @@ public class DialogJsonGenerator {
         public String labelFormat = "options.generic_value";
         public float start = 0f;
         public float end = 10f;
-        public float step = 1f;
-        public float initialFloat = 0f;
+        public Float step = null;
+        public Float initialFloat = null;
     }
 
     public static class Option {
@@ -144,6 +145,29 @@ public class DialogJsonGenerator {
         return element.toString();
     }
 
+    private static String cleanNamespacedType(String type) {
+        if (type == null) return "";
+        int separator = type.indexOf(':');
+        return separator >= 0 ? type.substring(separator + 1) : type;
+    }
+
+    private static String normalizeAfterAction(String afterAction) {
+        return switch (cleanNamespacedType(afterAction)) {
+            case "none" -> "none";
+            case "wait_for_response" -> "wait_for_response";
+            default -> "close";
+        };
+    }
+
+    private static String normalizeInputKey(String key, int index) {
+        String value = key == null ? "" : key.replaceAll("[^A-Za-z0-9_]", "_");
+        return value.isEmpty() ? "input_" + index : value;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
     // --- Serialization logic ---
 
     public static String serialize(DialogModel model, boolean pretty) {
@@ -159,12 +183,14 @@ public class DialogJsonGenerator {
             root.addProperty("can_close_with_escape", false);
         }
 
-        if (!model.pause) {
+        String afterAction = normalizeAfterAction(model.afterAction);
+        boolean pause = afterAction.equals("none") ? false : model.pause;
+        if (!pause) {
             root.addProperty("pause", false);
         }
 
-        if (model.afterAction != null && !model.afterAction.equals("close")) {
-            root.addProperty("after_action", model.afterAction);
+        if (!afterAction.equals("close")) {
+            root.addProperty("after_action", afterAction);
         }
 
         // Body Elements
@@ -176,20 +202,25 @@ public class DialogJsonGenerator {
                 if (elem.type.equals("minecraft:plain_message")) {
                     elemObj.add("contents", parseTextComponent(elem.contents));
                     if (elem.width != 200) {
-                        elemObj.addProperty("width", elem.width);
+                        elemObj.addProperty("width", clamp(elem.width, 1, 1024));
                     }
                 } else if (elem.type.equals("minecraft:item")) {
                     JsonObject itemObj = new JsonObject();
-                    itemObj.addProperty("id", elem.itemId);
+                    String itemId = elem.itemId == null || elem.itemId.isBlank() || elem.itemId.equals("minecraft:air")
+                        ? "minecraft:stone"
+                        : elem.itemId;
+                    itemObj.addProperty("id", itemId);
                     if (elem.itemCount != 1) {
-                        itemObj.addProperty("count", elem.itemCount);
+                        itemObj.addProperty("count", clamp(elem.itemCount, 1, 99));
                     }
                     if (elem.itemComponents != null && !elem.itemComponents.trim().isEmpty()) {
                         try {
                             JsonElement compJson = JsonParser.parseString(elem.itemComponents);
-                            itemObj.add("components", compJson);
+                            if (compJson.isJsonObject()) {
+                                itemObj.add("components", compJson);
+                            }
                         } catch (Exception e) {
-                            // ignore component error or save as raw
+                            // Invalid component patches are omitted.
                         }
                     }
                     elemObj.add("item", itemObj);
@@ -198,16 +229,16 @@ public class DialogJsonGenerator {
                         elemObj.add("description", parseTextComponent(elem.description));
                     }
                     if (!elem.showDecoration) {
-                        elemObj.addProperty("show_decoration", false);
+                        elemObj.addProperty("show_decorations", false);
                     }
                     if (!elem.showTooltip) {
                         elemObj.addProperty("show_tooltip", false);
                     }
                     if (elem.itemWidth != 16) {
-                        elemObj.addProperty("width", elem.itemWidth);
+                        elemObj.addProperty("width", clamp(elem.itemWidth, 1, 256));
                     }
                     if (elem.itemHeight != 16) {
-                        elemObj.addProperty("height", elem.itemHeight);
+                        elemObj.addProperty("height", clamp(elem.itemHeight, 1, 256));
                     }
                 }
                 bodyArray.add(elemObj);
@@ -218,25 +249,31 @@ public class DialogJsonGenerator {
         // Inputs
         if (model.inputs != null && !model.inputs.isEmpty()) {
             JsonArray inputsArray = new JsonArray();
-            for (InputControl input : model.inputs) {
+            for (int inputIndex = 0; inputIndex < model.inputs.size(); inputIndex++) {
+                InputControl input = model.inputs.get(inputIndex);
                 JsonObject inputObj = new JsonObject();
                 inputObj.addProperty("type", input.type);
-                inputObj.addProperty("key", input.key);
+                inputObj.addProperty("key", normalizeInputKey(input.key, inputIndex + 1));
                 inputObj.add("label", parseTextComponent(input.label));
 
                 switch (input.type) {
                     case "minecraft:text":
                         if (input.width != 200) {
-                            inputObj.addProperty("width", input.width);
+                            inputObj.addProperty("width", clamp(input.width, 1, 1024));
                         }
                         if (!input.labelVisible) {
                             inputObj.addProperty("label_visible", false);
                         }
-                        if (input.initialText != null && !input.initialText.isEmpty()) {
-                            inputObj.addProperty("initial", input.initialText);
+                        int maxLength = Math.max(1, input.maxLength);
+                        String initialText = input.initialText == null ? "" : input.initialText;
+                        if (initialText.length() > maxLength) {
+                            initialText = initialText.substring(0, maxLength);
                         }
-                        if (input.maxLength != 32) {
-                            inputObj.addProperty("max_length", input.maxLength);
+                        if (!initialText.isEmpty()) {
+                            inputObj.addProperty("initial", initialText);
+                        }
+                        if (maxLength != 32) {
+                            inputObj.addProperty("max_length", maxLength);
                         }
                         if (input.multiline) {
                             JsonObject multilineObj = new JsonObject();
@@ -244,7 +281,7 @@ public class DialogJsonGenerator {
                                 multilineObj.addProperty("max_lines", input.maxLines);
                             }
                             if (input.multilineHeight > 0) {
-                                multilineObj.addProperty("height", input.multilineHeight);
+                                multilineObj.addProperty("height", clamp(input.multilineHeight, 1, 512));
                             }
                             inputObj.add("multiline", multilineObj);
                         }
@@ -262,18 +299,26 @@ public class DialogJsonGenerator {
                         break;
                     case "minecraft:single_option":
                         if (input.width != 200) {
-                            inputObj.addProperty("width", input.width);
+                            inputObj.addProperty("width", clamp(input.width, 1, 1024));
                         }
                         if (!input.labelVisible) {
                             inputObj.addProperty("label_visible", false);
                         }
                         JsonArray optionsArray = new JsonArray();
-                        for (Option opt : input.options) {
+                        List<Option> options = input.options.isEmpty()
+                            ? List.of(new Option("option", "", true))
+                            : input.options;
+                        boolean initialWritten = false;
+                        for (Option opt : options) {
                             JsonObject optObj = new JsonObject();
-                            optObj.addProperty("id", opt.id);
-                            optObj.add("display", parseTextComponent(opt.display));
-                            if (opt.initial) {
+                            String optionId = opt.id == null || opt.id.isEmpty() ? "option" : opt.id;
+                            optObj.addProperty("id", optionId);
+                            if (opt.display != null && !opt.display.isEmpty()) {
+                                optObj.add("display", parseTextComponent(opt.display));
+                            }
+                            if (opt.initial && !initialWritten) {
                                 optObj.addProperty("initial", true);
+                                initialWritten = true;
                             }
                             optionsArray.add(optObj);
                         }
@@ -284,14 +329,16 @@ public class DialogJsonGenerator {
                             inputObj.addProperty("label_format", input.labelFormat);
                         }
                         if (input.width != 200) {
-                            inputObj.addProperty("width", input.width);
+                            inputObj.addProperty("width", clamp(input.width, 1, 1024));
                         }
                         inputObj.addProperty("start", input.start);
                         inputObj.addProperty("end", input.end);
-                        if (input.step > 0 && input.step != 1.0f) {
+                        if (input.step != null && input.step > 0) {
                             inputObj.addProperty("step", input.step);
                         }
-                        if (input.initialFloat != (input.start + input.end) / 2.0f) {
+                        if (input.initialFloat != null
+                            && input.initialFloat >= Math.min(input.start, input.end)
+                            && input.initialFloat <= Math.max(input.start, input.end)) {
                             inputObj.addProperty("initial", input.initialFloat);
                         }
                         break;
@@ -304,7 +351,9 @@ public class DialogJsonGenerator {
         // Type Specific Click Actions / Fields
         switch (model.type) {
             case "minecraft:notice":
-                root.add("action", serializeClickAction(model.noticeAction));
+                if (!isDefaultNoticeAction(model.noticeAction)) {
+                    root.add("action", serializeClickAction(model.noticeAction));
+                }
                 break;
             case "minecraft:confirmation":
                 root.add("yes", serializeClickAction(model.confirmYes));
@@ -315,9 +364,12 @@ public class DialogJsonGenerator {
                 for (ClickAction action : model.actions) {
                     actArray.add(serializeClickAction(action));
                 }
+                if (actArray.isEmpty()) {
+                    actArray.add(serializeClickAction(new ClickAction("", "close")));
+                }
                 root.add("actions", actArray);
                 if (model.columns != 2) {
-                    root.addProperty("columns", model.columns);
+                    root.addProperty("columns", Math.max(1, model.columns));
                 }
                 if (model.exitAction != null && !model.exitAction.label.isEmpty()) {
                     root.add("exit_action", serializeClickAction(model.exitAction));
@@ -325,10 +377,10 @@ public class DialogJsonGenerator {
                 break;
             case "minecraft:server_links":
                 if (model.columns != 2) {
-                    root.addProperty("columns", model.columns);
+                    root.addProperty("columns", Math.max(1, model.columns));
                 }
                 if (model.buttonWidth != 150) {
-                    root.addProperty("button_width", model.buttonWidth);
+                    root.addProperty("button_width", clamp(model.buttonWidth, 1, 1024));
                 }
                 if (model.exitAction != null && !model.exitAction.label.isEmpty()) {
                     root.add("exit_action", serializeClickAction(model.exitAction));
@@ -349,10 +401,10 @@ public class DialogJsonGenerator {
                 }
                 root.add("dialogs", dlArray);
                 if (model.columns != 2) {
-                    root.addProperty("columns", model.columns);
+                    root.addProperty("columns", Math.max(1, model.columns));
                 }
                 if (model.buttonWidth != 150) {
-                    root.addProperty("button_width", model.buttonWidth);
+                    root.addProperty("button_width", clamp(model.buttonWidth, 1, 1024));
                 }
                 if (model.exitAction != null && !model.exitAction.label.isEmpty()) {
                     root.add("exit_action", serializeClickAction(model.exitAction));
@@ -366,21 +418,22 @@ public class DialogJsonGenerator {
 
     private static JsonObject serializeClickAction(ClickAction action) {
         JsonObject obj = new JsonObject();
-        
-        String actType = action.action.type;
-        boolean hasAction = (actType != null && !actType.equals("close") && !actType.isEmpty());
-
-        String labelValue = action.label;
-        if (hasAction && (labelValue.equals("gui.ok") || labelValue.equals("gui.yes") || labelValue.equals("gui.no"))) {
-            labelValue = "";
+        if (action == null) {
+            obj.add("label", new JsonPrimitive(""));
+            return obj;
         }
-        obj.add("label", parseTextComponent(labelValue));
+        
+        String actType = action.action == null ? "" : action.action.type;
+        String cleanType = cleanNamespacedType(actType);
+        boolean hasAction = isUsableAction(action, cleanType);
+
+        obj.add("label", parseButtonLabel(action.label));
 
         if (action.tooltip != null && !action.tooltip.isEmpty()) {
             obj.add("tooltip", parseTextComponent(action.tooltip));
         }
         if (action.width != 150) {
-            obj.addProperty("width", action.width);
+            obj.addProperty("width", clamp(action.width, 1, 1024));
         }
 
         if (!hasAction) {
@@ -389,11 +442,6 @@ public class DialogJsonGenerator {
 
         JsonObject actObj = new JsonObject();
         actObj.addProperty("type", actType);
-
-        String cleanType = actType;
-        if (cleanType != null && cleanType.contains(":")) {
-            cleanType = cleanType.substring(cleanType.indexOf(":") + 1);
-        }
 
         switch (cleanType != null ? cleanType : "") {
             case "open_url":
@@ -444,9 +492,12 @@ public class DialogJsonGenerator {
                 actObj.addProperty("id", action.action.dynamicCustomId != null ? action.action.dynamicCustomId : "");
                 if (action.action.dynamicAdditions != null && !action.action.dynamicAdditions.isEmpty()) {
                     try {
-                        actObj.add("additions", JsonParser.parseString(action.action.dynamicAdditions));
+                        JsonElement additions = JsonParser.parseString(action.action.dynamicAdditions);
+                        if (additions.isJsonObject()) {
+                            actObj.add("additions", additions);
+                        }
                     } catch (Exception e) {
-                        // ignore additions parse error
+                        // Invalid compound additions are omitted.
                     }
                 }
                 break;
@@ -454,6 +505,71 @@ public class DialogJsonGenerator {
 
         obj.add("action", actObj);
         return obj;
+    }
+
+    private static boolean isUsableAction(ClickAction action, String cleanType) {
+        if (action.action == null) return false;
+        return switch (cleanType) {
+            case "open_url" -> isValidUrl(action.action.url);
+            case "run_command", "suggest_command", "copy_to_clipboard", "dynamic/run_command" -> true;
+            case "change_page" -> action.action.page > 0;
+            case "show_dialog" -> isInlineObject(action.action.showDialogId) || isValidIdentifier(action.action.showDialogId);
+            case "custom" -> isValidIdentifier(action.action.customId);
+            case "dynamic/custom" -> isValidIdentifier(action.action.dynamicCustomId);
+            default -> false;
+        };
+    }
+
+    private static boolean isValidUrl(String value) {
+        if (value == null || value.isBlank()) return false;
+        try {
+            URI uri = URI.create(value);
+            return uri.isAbsolute();
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isValidIdentifier(String value) {
+        return value != null && value.matches("^(?:[a-z0-9_.-]+:)?[a-z0-9_./-]+$");
+    }
+
+    private static boolean isInlineObject(String value) {
+        if (value == null || !value.trim().startsWith("{")) return false;
+        try {
+            return JsonParser.parseString(value).isJsonObject();
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isDefaultNoticeAction(ClickAction action) {
+        return action != null
+            && action.action != null
+            && cleanNamespacedType(action.action.type).equals("close")
+            && "gui.ok".equals(action.label)
+            && (action.tooltip == null || action.tooltip.isEmpty())
+            && action.width == 150;
+    }
+
+    private static JsonElement parseButtonLabel(String label) {
+        String value = label == null ? "" : label;
+        if (value.equals("gui.ok") || value.equals("gui.yes") || value.equals("gui.no") || value.equals("gui.back")) {
+            JsonObject translated = new JsonObject();
+            translated.addProperty("translate", value);
+            return translated;
+        }
+        return parseTextComponent(value);
+    }
+
+    private static String stringifyButtonLabel(JsonElement element) {
+        if (element != null && element.isJsonObject()) {
+            JsonObject object = element.getAsJsonObject();
+            if (object.size() == 1 && object.has("translate") && object.get("translate").isJsonPrimitive()) {
+                return object.get("translate").getAsString();
+            }
+        }
+        return stringifyTextComponent(element);
     }
 
     // --- Deserialization logic ---
@@ -516,8 +632,8 @@ public class DialogJsonGenerator {
                     if (elemObj.has("description")) {
                         elem.description = stringifyTextComponent(elemObj.get("description"));
                     }
-                    if (elemObj.has("show_decoration")) {
-                        elem.showDecoration = elemObj.get("show_decoration").getAsBoolean();
+                    if (elemObj.has("show_decorations")) {
+                        elem.showDecoration = elemObj.get("show_decorations").getAsBoolean();
                     }
                     if (elemObj.has("show_tooltip")) {
                         elem.showTooltip = elemObj.get("show_tooltip").getAsBoolean();
@@ -589,8 +705,6 @@ public class DialogJsonGenerator {
                         if (inputObj.has("step")) input.step = inputObj.get("step").getAsFloat();
                         if (inputObj.has("initial")) {
                             input.initialFloat = inputObj.get("initial").getAsFloat();
-                        } else {
-                            input.initialFloat = (input.start + input.end) / 2.0f;
                         }
                         break;
                 }
@@ -669,7 +783,7 @@ public class DialogJsonGenerator {
     }
 
     private static ClickAction deserializeClickAction(JsonObject obj) {
-        String label = obj.has("label") ? stringifyTextComponent(obj.get("label")) : "";
+        String label = obj.has("label") ? stringifyButtonLabel(obj.get("label")) : "";
         ClickAction action = new ClickAction(label, "close");
         
         if (obj.has("tooltip")) action.tooltip = stringifyTextComponent(obj.get("tooltip"));
@@ -679,7 +793,7 @@ public class DialogJsonGenerator {
             JsonObject actObj = obj.getAsJsonObject("action");
             if (actObj.has("type")) action.action.type = actObj.get("type").getAsString();
             
-            switch (action.action.type) {
+            switch (cleanNamespacedType(action.action.type)) {
                 case "open_url":
                     if (actObj.has("url")) action.action.url = actObj.get("url").getAsString();
                     break;

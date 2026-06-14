@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "mapmakerutils",
 	"version": "${version}",
-	"name": "Map Maker's Command Utilities",
-	"description": "Add some commands to help make datapacks and maps.",
+	"name": "Map Maker's Command Utilities (Test Version)",
+	"description": "Add some commands to help make datapacks and maps. (TEST BUILD - report bugs if found)",
 	"authors": [
 		"Potan7"
 	],
