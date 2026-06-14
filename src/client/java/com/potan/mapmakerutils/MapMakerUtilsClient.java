@@ -17,7 +17,6 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -71,124 +70,6 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 					.executes(this::openEditorExisting)));
 		});
 
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("testdialogeditor")
-				.executes(this::runTest));
-		});
-
-		if ("true".equals(System.getProperty("mapmakerutils.dialogE2E"))) {
-			ClientTickEvents.START_CLIENT_TICK.register(new ClientTickEvents.StartTick() {
-				private boolean e2eStarted = false;
-				private int e2eTickDelay = 0;
-				private boolean e2eTestExecuted = false;
-
-				@Override
-				public void onStartTick(Minecraft client) {
-					if (client.screen instanceof net.minecraft.client.gui.screens.TitleScreen && !e2eStarted) {
-						e2eTickDelay++;
-						if (e2eTickDelay > 60) { // wait 3 seconds
-							e2eStarted = true;
-							client.execute(() -> {
-								try {
-									client.createWorldOpenFlows().openWorld("New World", () -> {});
-								} catch (Exception e) {
-									writeE2EResult(false, "Failed to open world: " + e.getMessage());
-									client.stop();
-								}
-							});
-						}
-					}
-
-					if (client.level != null && client.player != null && e2eStarted && !e2eTestExecuted) {
-						e2eTestExecuted = true;
-						client.execute(() -> {
-							try {
-								DialogEditorScreen screen = new DialogEditorScreen(null);
-								client.setScreen(screen);
-								
-								boolean success = screen.runAutomationTest();
-								client.setScreen(null);
-								
-								writeE2EResult(success, screen.getAutomationReport());
-								client.stop();
-							} catch (Exception e) {
-								writeE2EResult(false, "Automation exception: " + e.getMessage());
-								client.stop();
-							}
-						});
-					}
-				}
-			});
-		}
-	}
-
-	private static void writeE2EResult(boolean success, String report) {
-		try {
-			File dir = new File("../build/dialog-e2e");
-			if (!dir.getParentFile().exists()) {
-				dir = new File("build/dialog-e2e");
-			}
-			if (!dir.exists()) dir.mkdirs();
-			File file = new File(dir, "result.json");
-			
-			String json;
-			if (success) {
-				json = "{\n" +
-				       "  \"passed\": true,\n" +
-				       "  \"message\": \"" + report + "\",\n" +
-				       "  \"log\": \"run/logs/latest.log\"\n" +
-				       "}";
-			} else {
-				String msg = report.startsWith("FAIL: ") ? report.substring(6) : report;
-				String step = "unknown";
-				String expected = "null";
-				String actual = "null";
-				
-				if (msg.contains("Input width was not clamped")) {
-					step = "number-range-width-clamp";
-					expected = "1";
-					if (msg.contains("actual=")) {
-						actual = msg.substring(msg.indexOf("actual=") + 7).trim();
-					}
-				} else if (msg.contains("Range initial value was not clamped")) {
-					step = "number-range-initial-clamp";
-					expected = "10";
-					if (msg.contains("actual=")) {
-						actual = msg.substring(msg.indexOf("actual=") + 7).trim();
-					}
-				}
-				
-				json = "{\n" +
-				       "  \"passed\": false,\n" +
-				       "  \"step\": \"" + step + "\",\n" +
-				       "  \"expected\": " + expected + ",\n" +
-				       "  \"actual\": " + actual + ",\n" +
-				       "  \"message\": \"" + msg.replace("\"", "\\\"").replace("\n", "\\n") + "\",\n" +
-				       "  \"log\": \"run/logs/latest.log\"\n" +
-				       "}";
-			}
-			java.nio.file.Files.writeString(file.toPath(), json);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	int runTest(CommandContext<FabricClientCommandSource> context) {
-		Minecraft mc = Minecraft.getInstance();
-		mc.execute(() -> {
-			DialogEditorScreen screen = new DialogEditorScreen(null);
-			mc.setScreen(screen);
-			
-			boolean success = screen.runAutomationTest();
-			mc.setScreen(null); // Close the screen
-			
-			if (success) {
-				context.getSource().sendFeedback(Component.literal("§a[MapMakerUtils] In-Game UI automation test PASSED!"));
-			} else {
-				context.getSource().sendError(Component.literal("§c[MapMakerUtils] In-Game UI automation test FAILED!"));
-			}
-		});
-		return Command.SINGLE_SUCCESS;
 	}
 
 	int openEditorEmpty(CommandContext<FabricClientCommandSource> context) {

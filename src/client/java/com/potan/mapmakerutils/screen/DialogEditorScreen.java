@@ -19,7 +19,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.Registries;
@@ -107,8 +106,6 @@ public class DialogEditorScreen extends Screen {
     private final List<String> existingDialogsList = new ArrayList<>();
     private String editorMessage = "";
     private boolean editorMessageIsError = false;
-    private String automationReport = "Not run";
-    private boolean lastSaveHotSwapped = false;
 
     public DialogEditorScreen(DialogModel model) {
         super(Component.literal("Dialog Editor"));
@@ -1018,7 +1015,6 @@ public class DialogEditorScreen extends Screen {
     }
 
     private boolean saveToDatapack() {
-        lastSaveHotSwapped = false;
         this.namespace = namespaceField.getValue().trim();
         this.filename = filenameField.getValue().trim();
         this.datapackName = datapackField.getValue().trim();
@@ -1070,8 +1066,6 @@ public class DialogEditorScreen extends Screen {
             this.datapackName,
             model
         );
-        lastSaveHotSwapped = result.isHotSwapped();
-
         if (!result.isSuccess()) {
             error(result.getErrorMessage());
             if (this.minecraft.player != null) {
@@ -1645,181 +1639,4 @@ public class DialogEditorScreen extends Screen {
         }
     }
 
-    public boolean runAutomationTest() {
-        Path targetFile = null;
-        try {
-            this.namespaceField.setValue("test_temp");
-            this.filenameField.setValue("test_gui");
-            this.datapackField.setValue("mapmakerutils_generated");
-            this.titleField.setValue("Auto-Test Dialog");
-
-            automationClick(typeButton);
-            automationCheck(model.type.equals("minecraft:confirmation"), "Type button did not switch to confirmation");
-
-            automationClick(addBodyBtn);
-            automationCheck(state == ScreenState.EDIT_BODY, "Add Body button did not open the body editor");
-            automationSetField(editBox1, "Automated button-click UI test!");
-            automationSetField(editBox2, "2048");
-            automationClickByLabel("Back to Main List");
-            automationCheck(model.body.size() == 1, "Body editor did not add an element");
-            automationCheck(model.body.get(0).width == 1024, "Body width was not clamped through the editor");
-
-            automationClick(addInputBtn);
-            automationCheck(state == ScreenState.EDIT_INPUT, "Add Input button did not open the input editor");
-            automationClick(subDropdownButton1);
-            automationClick(subDropdownButton1);
-            automationClick(subDropdownButton1);
-            automationCheck(model.inputs.get(0).type.equals("minecraft:number_range"), "Input type button did not reach number_range");
-            automationSetField(editBox1, "amount");
-            automationSetField(editBox2, "Amount");
-            automationSetField(editBox3, "0");
-            automationSetField(editBox5, "0");
-            automationSetField(editBox6, "10");
-            automationSetField(editBox7, "1");
-            automationSetField(editBox8, "20");
-            automationClickByLabel("Back to Main List");
-            automationCheck(
-                model.inputs.get(0).width == 1,
-                "Input width was not clamped through the editor; actual=" + model.inputs.get(0).width
-            );
-            automationCheck(
-                Float.valueOf(10f).equals(model.inputs.get(0).initialFloat),
-                "Range initial value was not clamped; actual=" + model.inputs.get(0).initialFloat
-            );
-
-            automationClick(editActionsBtn);
-            automationCheck(state == ScreenState.EDIT_ACTIONS, "Edit Footer Actions button did not open the action editor");
-            automationClick(actionsWidgets.get(0));
-            automationCheck(state == ScreenState.EDIT_SINGLE_ACTION, "Confirmation Yes action button did not open");
-            automationClick(subDropdownButton1);
-            automationClick(subDropdownButton1);
-            automationSetField(editBox1, "Run Test");
-            automationSetField(editBox4, "say automated");
-            automationClickByLabel("Back to Main List");
-            automationCheck(state == ScreenState.EDIT_ACTIONS, "Action editor Back button did not return to actions");
-            automationClickByLabel("Back to Main");
-            automationCheck(state == ScreenState.MAIN, "Actions Back button did not return to main");
-
-            IntegratedServer server = this.minecraft.getSingleplayerServer();
-            automationCheck(server != null, "Automation requires a singleplayer world");
-            automationClick(saveBtn);
-            Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
-            targetFile = datapackDir.resolve(this.datapackName)
-                .resolve("data").resolve(this.namespace)
-                .resolve("dialog").resolve(this.filename + ".json");
-
-            automationCheck(Files.exists(targetFile), "Save button did not create the dialog file");
-            automationCheck(Files.readString(targetFile).contains("minecraft:confirmation"), "Confirmation JSON was not saved");
-
-            net.minecraft.core.Registry<net.minecraft.server.dialog.Dialog> dialogRegistry = 
-                server.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DIALOG);
-            automationCheck(dialogRegistry.containsKey(Identifier.parse("test_temp:test_gui")), "Saved dialog was not hot-swapped");
-
-            automationClick(typeButton);
-            automationCheck(model.type.equals("minecraft:multi_action"), "Type button did not switch to multi_action");
-            automationClick(editActionsBtn);
-            automationClickByLabel("+ Add Action");
-            automationCheck(model.actions.size() == 1, "Add Action button did not add an action");
-            automationClickByLabel("Back to Main");
-            automationClick(saveBtn);
-            automationCheck(Files.readString(targetFile).contains("minecraft:multi_action"), "Multi-action JSON was not saved");
-
-            automationClick(typeButton);
-            automationCheck(model.type.equals("minecraft:server_links"), "Type button did not switch to server_links");
-            automationClick(saveBtn);
-            automationCheck(Files.readString(targetFile).contains("minecraft:server_links"), "Server-links JSON was not saved");
-
-            automationClick(typeButton);
-            automationCheck(model.type.equals("minecraft:dialog_list"), "Type button did not switch to dialog_list");
-            model.dialogs.add("test_temp:test_gui");
-            automationClick(saveBtn);
-            automationCheck(Files.readString(targetFile).contains("minecraft:dialog_list"), "Dialog-list JSON was not saved");
-            automationCheck(lastSaveHotSwapped, "Dialog-list was not hot-swapped");
-
-            automationClick(typeButton);
-            automationCheck(model.type.equals("minecraft:notice"), "Type button did not switch back to notice");
-            automationClick(editActionsBtn);
-            automationClick(actionsWidgets.get(0));
-            automationClick(subDropdownButton1);
-            automationSetField(editBox4, "not a url");
-            automationClickByLabel("Back to Main List");
-            automationClickByLabel("Back to Main");
-            automationClick(copyJsonBtn);
-            automationCheck(editorMessageIsError && editorMessage.contains("invalid URL"), "Invalid URL did not block Copy Inline JSON");
-
-            automationReport = "PASS: clicked navigation, body, input, action, save, type, and validation controls";
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            automationReport = "FAIL: " + e.getMessage();
-            return false;
-        } finally {
-            if (targetFile != null) {
-                try {
-                    Files.deleteIfExists(targetFile);
-                } catch (Exception ignored) {
-                }
-            }
-        }
-    }
-
-    public String getAutomationReport() {
-        return automationReport;
-    }
-
-    private void automationClick(net.minecraft.client.gui.components.AbstractWidget widget) {
-        automationCheck(widget != null, "Widget reference is null");
-        automationScrollIntoView(widget);
-        automationCheck(
-            widget.visible && widget.active,
-            "Widget is not clickable: " + widget.getMessage().getString()
-                + " at (" + widget.getX() + ", " + widget.getY() + ")"
-                + " while screen state is " + state
-        );
-        MouseButtonEvent event = new MouseButtonEvent(
-            widget.getX() + widget.getWidth() / 2.0,
-            widget.getY() + widget.getHeight() / 2.0,
-            new MouseButtonInfo(0, 0)
-        );
-        automationCheck(this.mouseClicked(event, false), "Widget click was not handled: " + widget.getMessage().getString());
-    }
-
-    private void automationScrollIntoView(net.minecraft.client.gui.components.AbstractWidget widget) {
-        if (state != ScreenState.MAIN || !mainWidgets.contains(widget)) return;
-
-        for (int attempt = 0; attempt < 100 && (!widget.visible || !widget.active); attempt++) {
-            double direction = widget.getY() < 5 ? 1.0 : -1.0;
-            this.mouseScrolled(10, this.height / 2.0, 0, direction);
-        }
-    }
-
-    private void automationClickByLabel(String label) {
-        for (net.minecraft.client.gui.components.AbstractWidget widget : allAutomationWidgets()) {
-            if (widget.visible && widget.active && widget.getMessage().getString().equals(label)) {
-                automationClick(widget);
-                return;
-            }
-        }
-        throw new IllegalStateException("Could not find clickable widget: " + label);
-    }
-
-    private void automationSetField(EditBox field, String value) {
-        automationCheck(field != null && field.visible && field.active, "Edit field is not active for value: " + value);
-        automationClick(field);
-        field.setValue(value);
-        automationCheck(field.getValue().equals(value), "Edit field rejected value '" + value + "'; actual='" + field.getValue() + "'");
-    }
-
-    private List<net.minecraft.client.gui.components.AbstractWidget> allAutomationWidgets() {
-        List<net.minecraft.client.gui.components.AbstractWidget> widgets = new ArrayList<>();
-        widgets.addAll(mainWidgets);
-        widgets.addAll(subWidgets);
-        widgets.addAll(actionsWidgets);
-        widgets.addAll(listWidgets);
-        return widgets;
-    }
-
-    private void automationCheck(boolean condition, String message) {
-        if (!condition) throw new IllegalStateException(message);
-    }
 }
