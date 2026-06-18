@@ -298,17 +298,12 @@ public class DialogEditorScreen extends Screen {
         this.addWidgetToMain(copyJsonBtn);
 
         saveBtn = Button.builder(Component.literal("Save"), b -> {
-            saveToDatapack();
+            handleSave(false);
         }).bounds(10 + footerBtnWidth + 5, this.height - 25, footerBtnWidth, 18).build();
         this.addWidgetToMain(saveBtn);
 
         showBtn = Button.builder(Component.literal("Save & Show"), b -> {
-            if (saveToDatapack()) {
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.connection.sendCommand("dialog show @s " + this.namespace + ":" + this.filename);
-                    this.onClose();
-                }
-            }
+            handleSave(true);
         }).bounds(10 + (footerBtnWidth + 5) * 2, this.height - 25, footerBtnWidth, 18).build();
         this.addWidgetToMain(showBtn);
 
@@ -1014,7 +1009,7 @@ public class DialogEditorScreen extends Screen {
         editorMessageIsError = false;
     }
 
-    private boolean saveToDatapack() {
+    private void handleSave(boolean showAfterSave) {
         this.namespace = namespaceField.getValue().trim();
         this.filename = filenameField.getValue().trim();
         this.datapackName = datapackField.getValue().trim();
@@ -1027,27 +1022,27 @@ public class DialogEditorScreen extends Screen {
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Namespace and Filename cannot be empty!"));
             }
-            return false;
+            return;
         }
 
         // Security check: restrict namespace, filename, and datapackName to safe characters to prevent directory traversal
         if (!this.namespace.matches("^[a-z0-9_.-]+$") || !this.filename.matches("^[a-z0-9_.-]+$")) {
-            error("Namespace and filename must use lowercase letters, numbers, underscores, hyphens, or periods.");
+            error("Namespace and filename must use lowercase letters, underscores, hyphens, or periods.");
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Namespace and Filename must be lowercase alphanumeric, underscores, hyphens, or periods!"));
             }
-            return false;
+            return;
         }
         if (!this.datapackName.matches("^[a-zA-Z0-9_.-]+$")) {
             error("Datapack name contains invalid characters.");
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Datapack name must be alphanumeric, underscores, hyphens, or periods!"));
             }
-            return false;
+            return;
         }
 
         if (!validateForExport()) {
-            return false;
+            return;
         }
 
         IntegratedServer server = this.minecraft.getSingleplayerServer();
@@ -1056,9 +1051,28 @@ public class DialogEditorScreen extends Screen {
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] Singleplayer only!"));
             }
-            return false;
+            return;
         }
 
+        // Check if datapack exists
+        boolean datapackExists = DialogDatapackManager.doesDatapackExist(server, this.datapackName);
+        if (!datapackExists) {
+            this.minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(
+                (confirmed) -> {
+                    this.minecraft.setScreen(this);
+                    if (confirmed) {
+                        executeSave(server, showAfterSave);
+                    }
+                },
+                Component.translatable("mapmakerutils.ui.warn.new_datapack.title"),
+                Component.translatable("mapmakerutils.ui.warn.new_datapack.desc", this.datapackName)
+            ));
+        } else {
+            executeSave(server, showAfterSave);
+        }
+    }
+
+    private void executeSave(IntegratedServer server, boolean showAfterSave) {
         DialogDatapackManager.SaveResult result = DialogDatapackManager.saveToDatapack(
             server,
             this.namespace,
@@ -1071,7 +1085,7 @@ public class DialogEditorScreen extends Screen {
             if (this.minecraft.player != null) {
                 this.minecraft.player.sendSystemMessage(Component.literal("§c[MapMakerUtils] " + result.getErrorMessage()));
             }
-            return false;
+            return;
         }
 
         if (this.minecraft.player != null) {
@@ -1083,7 +1097,12 @@ public class DialogEditorScreen extends Screen {
             }
         }
 
-        return true;
+        if (showAfterSave) {
+            if (this.minecraft.player != null) {
+                this.minecraft.player.connection.sendCommand("dialog show @s " + this.namespace + ":" + this.filename);
+                this.onClose();
+            }
+        }
     }
 
     private boolean validateForExport() {

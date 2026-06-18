@@ -172,6 +172,17 @@ public class DialogDatapackManager {
         }
     }
 
+    public static boolean doesDatapackExist(IntegratedServer server, String datapackName) {
+        if (server == null) return false;
+        try {
+            Path datapackDir = server.getWorldPath(LevelResource.DATAPACK_DIR);
+            Path targetDatapack = datapackDir.resolve(datapackName);
+            return Files.exists(targetDatapack);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static SaveResult saveToDatapack(
             IntegratedServer server,
             String namespace,

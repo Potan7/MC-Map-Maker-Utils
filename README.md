@@ -23,8 +23,8 @@
 
 ### Workflow Tools / 작업 효율 도구
 *   **`/dialogeditor [dialogId]`** (after 1.2.0)
-    *   **EN**: Opens an in-game editor for creating a new Dialog or editing an existing Dialog by ID. Supports all Minecraft 26.1.2 Dialog types, validates and normalizes input values, saves the JSON into a world data pack, and applies changes immediately through registry hot-swapping.
-    *   **KR**: 새로운 Dialog를 만들거나 ID로 기존 Dialog를 편집할 수 있는 인게임 편집기를 엽니다. Minecraft 26.1.2의 모든 Dialog 유형을 지원하며, 입력값을 검증 및 보정하고 월드 데이터팩에 JSON을 저장한 뒤 레지스트리 hot-swap을 통해 변경사항을 즉시 적용합니다.
+    *   **EN**: Opens an in-game editor for creating a new Dialog or editing an existing Dialog by ID. Supports all Minecraft Dialog types, validates and normalizes input values, saves the JSON into a world data pack, and applies changes immediately through registry hot-swapping. Shows a warning screen if the target datapack does not exist yet (added in 1.2.1).
+    *   **KR**: 새로운 Dialog를 만들거나 ID로 기존 Dialog를 편집할 수 있는 인게임 편집기를 엽니다. Minecraft의 모든 Dialog 유형을 지원하며, 입력값을 검증 및 보정하고 월드 데이터팩에 JSON을 저장한 뒤 레지스트리 hot-swap을 통해 변경사항을 즉시 적용합니다. 아직 존재하지 않는 데이터팩에 저장하려 할 시 경고 화면을 띄워줍니다 (1.2.1 추가).
 *   **`/openpackfolder`**
     *   **EN**: (Singleplayer Only) Instantly opens the `datapacks` folder of the current world in your OS file explorer.
     *   **KR**: (싱글플레이 전용) 현재 월드의 `datapacks` 폴더를 파일 탐색기로 즉시 엽니다.
@@ -44,7 +44,7 @@
 ---
 
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.1.2 - 1.21.11
+*   **Minecraft**: 26.1.2 - 1.21.11 (v26.1.2-1.2.1)
 *   **Fabric Loader**: 0.19.3+
 *   **Fabric API**: Required
 
@@ -57,6 +57,10 @@ This mod is available under the **MIT License**.
 ---
 
 ## Changelog / 변경 사항
+### v26.1.2-1.2.1
+- **EN**: Added a safety confirmation dialog (`ConfirmScreen`) when attempting to save a dialog to a non-existent datapack.
+- **KR**: 존재하지 않는 데이터팩에 다이얼로그를 저장하려고 할 때 안전 확인 경고창(`ConfirmScreen`)을 띄우는 기능을 추가했습니다.
+
 ### v26.1.2-1.2.0
 - Added `/dialogeditor [dialogId]`, an in-game editor for creating and editing Minecraft 26.1.2 Dialog JSON files.
     - Supports `notice`, `confirmation`, `multi_action`, `server_links`, and `dialog_list`.

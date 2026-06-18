@@ -71,5 +71,7 @@
   "mapmakerutils.ui.editor.action.edit_notice_ok": "Edit OK Action",
   "mapmakerutils.ui.editor.action.edit_confirm_yes": "Edit Yes Action",
   "mapmakerutils.ui.editor.action.edit_confirm_no": "Edit No Action",
-  "mapmakerutils.ui.editor.action.edit_exit": "Edit Exit Action"
+  "mapmakerutils.ui.editor.action.edit_exit": "Edit Exit Action",
+  "mapmakerutils.ui.warn.new_datapack.title": "New Datapack Creation",
+  "mapmakerutils.ui.warn.new_datapack.desc": "The datapack '%s' does not exist. Do you want to create a new datapack?"
 }

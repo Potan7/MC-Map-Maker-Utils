@@ -71,5 +71,7 @@
   "mapmakerutils.ui.editor.action.edit_notice_ok": "확인 액션 편집",
   "mapmakerutils.ui.editor.action.edit_confirm_yes": "예 액션 편집",
   "mapmakerutils.ui.editor.action.edit_confirm_no": "아니오 액션 편집",
-  "mapmakerutils.ui.editor.action.edit_exit": "닫기 액션 편집"
+  "mapmakerutils.ui.editor.action.edit_exit": "닫기 액션 편집",
+  "mapmakerutils.ui.warn.new_datapack.title": "새 데이터팩 생성",
+  "mapmakerutils.ui.warn.new_datapack.desc": "데이터팩 '%s'이(가) 존재하지 않습니다. 새로 생성하시겠습니까?"
 }
