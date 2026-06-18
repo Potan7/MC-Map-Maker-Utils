@@ -1,6 +1,10 @@
 # Map Maker's Utils (MMU)
-**Streamline your Map Making & Data Pack workflow in Minecraft 26.1.2**  
+**Streamline your Map Making & Data Pack workflow in Minecraft 26.2 & 26.1.2**  
 마인크래프트 맵 제작과 데이터팩 개발을 위한 유틸리티 모드입니다.
+
+## Download / 다운로드
+[Modrinth](https://modrinth.com/mod/map-maker-utils)
+
 
 ---
 
@@ -44,7 +48,7 @@
 ---
 
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.1.2 - 1.21.11 (v26.1.2-1.2.1)
+*   **Minecraft**: 26.2 (v26.2-1.2.1) / 26.1.2 (v26.1.2-1.2.1)
 *   **Fabric Loader**: 0.19.3+
 *   **Fabric API**: Required
 
@@ -52,14 +56,15 @@
 This mod is available under the **MIT License**.
 
 ### 최신 기능에 대하여
-- 현재 최신 기능은 항상 최신 버전을 기준으로 제작됩니다. 이전 버전에서는 일부 기능이 지원되지 않을 수 있습니다. 만약 요청이 들어온다면 이전 버전에서도 사용할 수 있도록 기능을 추가할 수도 있습니다. (예: `/openvscode` 명령어는 26.1.2 부터 지원되며, 이전 버전에서는 사용할 수 없습니다.)
+- 현재 최신 기능은 항상 최신 버전을 기준으로 제작됩니다. 이전 버전에서는 일부 기능이 지원되지 않을 수 있습니다. 만약 요청이 들어온다면 이전 버전에서도 사용할 수 있도록 기능을 추가할 수도 있습니다. (예: `/dialogeditor` 명령어는 1.2.0 에 추가되었으며 이는 26.1.2 버전 이상에서만 사용할 수 있습니다.)
 
 ---
 
 ## Changelog / 변경 사항
-### v26.1.2-1.2.1
-- **EN**: Added a safety confirmation dialog (`ConfirmScreen`) when attempting to save a dialog to a non-existent datapack.
-- **KR**: 존재하지 않는 데이터팩에 다이얼로그를 저장하려고 할 때 안전 확인 경고창(`ConfirmScreen`)을 띄우는 기능을 추가했습니다.
+### v26.2-1.2.1 & v26.1.2-1.2.1
+- **EN**: Added a safety confirmation dialog when attempting to save a dialog to a non-existent datapack.
+- **KR**: 존재하지 않는 데이터팩에 다이얼로그를 저장하려고 할 때 안전 확인 경고창을 띄우는 기능을 추가했습니다.
+
 
 ### v26.1.2-1.2.0
 - Added `/dialogeditor [dialogId]`, an in-game editor for creating and editing Minecraft 26.1.2 Dialog JSON files.
@@ -71,7 +76,7 @@ This mod is available under the **MIT License**.
 - Added '/copypos lookat' subcommand to copy coordinates of the block the player is currently looking at.
     - `/copypos` is same as `/copypos me` for backward compatibility.
 
-### v1.21.11-1.1.0
+### 1.1.0 (1.21.11)
 Added Error Log display on Safe Mode screen.
 
 Added "Ignore for session" button for Experimental/Registry warnings.

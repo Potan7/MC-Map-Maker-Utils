@@ -75,7 +75,7 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 	int openEditorEmpty(CommandContext<FabricClientCommandSource> context) {
 		Minecraft mc = Minecraft.getInstance();
 		mc.execute(() -> {
-			mc.setScreen(new DialogEditorScreen(null));
+			mc.setScreenAndShow(new DialogEditorScreen(null));
 		});
 		return Command.SINGLE_SUCCESS;
 	}
@@ -126,11 +126,11 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 					String json = Files.readString(dialogFile.toPath());
 					DialogJsonGenerator.DialogModel model = DialogJsonGenerator.deserialize(json);
 					mc.execute(() -> {
-						mc.setScreen(new DialogEditorScreen(model, finalNamespace, finalFilename, finalDatapackName));
+						mc.setScreenAndShow(new DialogEditorScreen(model, finalNamespace, finalFilename, finalDatapackName));
 					});
 				} else {
 					mc.execute(() -> {
-						mc.setScreen(new DialogEditorScreen(null, finalNamespace, finalFilename, finalDatapackName));
+						mc.setScreenAndShow(new DialogEditorScreen(null, finalNamespace, finalFilename, finalDatapackName));
 					});
 				}
 			} catch (Exception e) {

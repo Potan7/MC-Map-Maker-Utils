@@ -1057,9 +1057,9 @@ public class DialogEditorScreen extends Screen {
         // Check if datapack exists
         boolean datapackExists = DialogDatapackManager.doesDatapackExist(server, this.datapackName);
         if (!datapackExists) {
-            this.minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(
+            this.minecraft.setScreenAndShow(new net.minecraft.client.gui.screens.ConfirmScreen(
                 (confirmed) -> {
-                    this.minecraft.setScreen(this);
+                    this.minecraft.setScreenAndShow(this);
                     if (confirmed) {
                         executeSave(server, showAfterSave);
                     }

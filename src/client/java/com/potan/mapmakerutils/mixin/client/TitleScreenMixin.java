@@ -33,7 +33,7 @@ public class TitleScreenMixin extends Screen {
         minecraft.execute(() -> {
             this.minecraft.createWorldOpenFlows()
                 .openWorld(worldName, () -> {
-                    this.minecraft.setScreen(new TitleScreen());
+                    this.minecraft.setScreenAndShow(new TitleScreen());
                     System.out.println("Rejoining world is failed: " + worldName);
                 });
         });
