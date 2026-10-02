@@ -1,7 +1,7 @@
 {
 	"required": true,
 	"package": "com.potan.mapmakerutils.mixin.client",
-	"compatibilityLevel": "JAVA_21",
+	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"TitleScreenMixin",
 		"DatapackLoadFailureScreenMixin",

@@ -48,7 +48,8 @@
 ---
 
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.2 (v26.2-1.2.1) / 26.1.2 (v26.1.2-1.2.1)
+*   **Minecraft**: 26.2 (v26.2-1.2.2) / 26.1.2 (v26.1.2-1.2.1)
+*   **Java**: 25+
 *   **Fabric Loader**: 0.19.3+
 *   **Fabric API**: Required
 
@@ -61,6 +62,10 @@ This mod is available under the **MIT License**.
 ---
 
 ## Changelog / 변경 사항
+### v26.2-1.2.2
+- Generate new data packs with the running Minecraft version's data pack format.
+- Align CI and Mixin compatibility with Java 25 and pin Fabric Loom to 1.17.21.
+
 ### v26.2-1.2.1 & v26.1.2-1.2.1
 - **EN**: Added a safety confirmation dialog when attempting to save a dialog to a non-existent datapack.
 - **KR**: 존재하지 않는 데이터팩에 다이얼로그를 저장하려고 할 때 안전 확인 경고창을 띄우는 기능을 추가했습니다.
