@@ -1,5 +1,5 @@
 # Map Maker's Utils (MMU)
-**Streamline your Map Making & Data Pack workflow in Minecraft 26.2 & 26.1.2**  
+**Streamline your Map Making & Data Pack workflow in Minecraft 26.3**
 마인크래프트 맵 제작과 데이터팩 개발을 위한 유틸리티 모드입니다.
 
 ## Download / 다운로드
@@ -48,9 +48,9 @@
 ---
 
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.2 (v26.2-1.2.2) / 26.1.2 (v26.1.2-1.2.1)
+*   **Minecraft**: 26.3 (v26.3-1.2.2). For Minecraft 26.2, use the `26.2` branch (v26.2-1.2.2).
 *   **Java**: 25+
-*   **Fabric Loader**: 0.19.3+
+*   **Fabric Loader**: 0.19.5+
 *   **Fabric API**: Required
 
 ## License / 라이선스
@@ -62,6 +62,11 @@ This mod is available under the **MIT License**.
 ---
 
 ## Changelog / 변경 사항
+### v26.3-1.2.2
+- Update to Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3 and Gradle 9.6.0.
+- Use Minecraft's mouse button constants so the dialog editor scrollbar works with the SDL input backend.
+- Migrate `/openpackfolder` to Minecraft's `Blaze3D.openPath` API.
+
 ### v26.2-1.2.2
 - Generate new data packs with the running Minecraft version's data pack format.
 - Align CI and Mixin compatibility with Java 25 and pin Fabric Loom to 1.17.21.

@@ -5,6 +5,7 @@ import com.potan.mapmakerutils.util.DialogJsonGenerator;
 import com.potan.mapmakerutils.util.DialogJsonGenerator.*;
 import com.potan.mapmakerutils.util.DialogEditorValidator;
 import com.potan.mapmakerutils.util.DialogDatapackManager;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -1568,7 +1569,7 @@ public class DialogEditorScreen extends Screen {
                 double mouseX = event.x();
                 double mouseY = event.y();
 
-                if (event.button() == 0 && mouseX >= barX && mouseX <= barX + 4 && mouseY >= barY && mouseY <= barY + barHeight) {
+                if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && mouseX >= barX && mouseX <= barX + 4 && mouseY >= barY && mouseY <= barY + barHeight) {
                     this.isScrolling = true;
                     return true;
                 }
@@ -1579,7 +1580,7 @@ public class DialogEditorScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (event.button() == 0) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             this.isScrolling = false;
         }
         return super.mouseReleased(event);
@@ -1587,7 +1588,7 @@ public class DialogEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (this.isScrolling && state == ScreenState.MAIN && event.button() == 0) {
+        if (this.isScrolling && state == ScreenState.MAIN && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int topLimit = 5;
             int bottomLimit = this.height - 30;
             int visibleHeight = bottomLimit - topLimit;

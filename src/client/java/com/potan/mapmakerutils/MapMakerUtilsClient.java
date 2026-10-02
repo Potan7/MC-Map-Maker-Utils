@@ -12,7 +12,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.Blaze3D;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
@@ -189,12 +189,12 @@ public class MapMakerUtilsClient implements ClientModInitializer {
 				Path datapckPath = server.getWorldPath(LevelResource.DATAPACK_DIR);
 				File file = datapckPath.toFile();
 				if (file.exists()) {
-					Util.getPlatform().openFile(file);
+					Blaze3D.openPath(datapckPath);
 					context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.datapack_folder_opened"));
 				}
 				else {
 					file.mkdirs();
-					Util.getPlatform().openFile(file);
+					Blaze3D.openPath(datapckPath);
 					context.getSource().sendFeedback(Component.translatable("mapmakerutils.feedback.datapack_folder_created"));
 				}
 					
