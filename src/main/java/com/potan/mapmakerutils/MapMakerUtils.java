@@ -20,5 +20,6 @@ public class MapMakerUtils implements ModInitializer {
 		// Proceed with mild caution.
 
 		LOGGER.info(MOD_ID + " is initialize");
+		DevSetupCommand.register();
 	}
 }

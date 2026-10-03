@@ -1,4 +1,9 @@
 {
+  "mapmakerutils.reload.location": "Reload error: %s — line %s",
+  "mapmakerutils.reload.location_unknown": "Reload error: %s — line number unavailable",
+  "mapmakerutils.reload.busy": "A data pack reload is already running. Try again after it finishes.",
+  "mapmakerutils.feedback.devsetup": "Running %s development setup commands.",
+  "mapmakerutils.error.devsetup_config": "Could not read config/mapmakerutils.json: %s",
   "mapmakerutils.feedback.datapack_folder_opened": "Opened datapack folder.",
   "mapmakerutils.feedback.datapack_folder_created": "Datapack folder did not exist, so it was created and opened.",
   "mapmakerutils.feedback.reloading_world": "Reloading the world...",

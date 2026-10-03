@@ -1,4 +1,9 @@
 {
+  "mapmakerutils.reload.location": "리로드 오류: %s — %s번째 줄",
+  "mapmakerutils.reload.location_unknown": "리로드 오류: %s — 줄 번호 없음",
+  "mapmakerutils.reload.busy": "데이터팩 리로드가 이미 진행 중입니다. 완료 후 다시 시도하세요.",
+  "mapmakerutils.feedback.devsetup": "개발 환경 설정 명령 %s개를 실행합니다.",
+  "mapmakerutils.error.devsetup_config": "config/mapmakerutils.json을 읽지 못했습니다: %s",
   "mapmakerutils.feedback.datapack_folder_opened": "데이터팩 폴더를 열었습니다.",
   "mapmakerutils.feedback.datapack_folder_created": "데이터팩 폴더가 없어서 생성 후 열었습니다.",
   "mapmakerutils.feedback.reloading_world": "월드를 다시 로딩 중입니다...",

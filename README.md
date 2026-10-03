@@ -18,6 +18,9 @@
 ## Features / 주요 기능
 
 ### Debug & UI / 디버그 및 UI 개선
+*   **Reload Diagnostics / 리로드 오류 표시**
+    *   **EN**: Shows only the file path (or resource ID if no path is supplied) and available line number for data pack loading errors during `/reload`. Covers functions, advancements, recipes, loot tables, predicates, item modifiers, tags and other reloadable data. Codec/validation errors that provide no source line are marked "line number unavailable". Requires this mod on the server.
+    *   **KR**: `/reload` 중 데이터팩 로딩 오류가 발생하면 파일 경로(경로가 제공되지 않으면 리소스 ID)와 확인 가능한 줄 번호만 짧게 출력합니다. 함수, 발전 과제, 레시피, 전리품 테이블, 조건자, 아이템 수정자, 태그 및 기타 리로드 대상 데이터를 포함합니다. 원본 줄 번호를 제공하지 않는 Codec·검증 오류는 '줄 번호 없음'으로 표시하며, 서버에 모드가 설치되어 있어야 합니다.
 *   **Safe Mode Error Visualization / 안전 모드 오류 시각화**
     *   **EN**: When entering Safe Mode due to a data pack failure, the specific error log is displayed at the top of the screen for quick debugging.
     *   **KR**: 데이터팩 파싱 실패로 '안전 모드' 진입 시, 화면 상단에 원인이 되는 오류 로그를 직접 표시하여 빠른 수정을 돕습니다.
@@ -26,6 +29,9 @@
     *   **KR**: 레지스트리 수정 시 발생하는 '실험적 설정' 경고창에 '이번 세션 무시' 버튼을 추가합니다. 버튼을 누르면 게임 재부팅 전까지 해당 맵에서 경고창이 더 이상 뜨지 않습니다.
 
 ### Workflow Tools / 작업 효율 도구
+*   **`/devsetup`**
+    *   **EN**: Runs configurable world development commands. Defaults to frozen time at noon, clear frozen weather, disabled mob spawning, and disabled mob griefing. Requires game master permission (level 2, like `/gamerule`). Works in singleplayer with cheats and on servers with this mod installed.
+    *   **KR**: 개발용 월드 설정 명령을 일괄 실행합니다. 기본값은 정오 시간 고정, 맑은 날씨 고정, 몹 스폰 방지, 몹 파괴 방지입니다. `/gamerule`과 같은 명령어 권한(레벨 2)이 필요하며, 치트를 허용한 싱글플레이 또는 모드가 설치된 서버에서 사용할 수 있습니다.
 *   **`/dialogeditor [dialogId]`** (after 1.2.0)
     *   **EN**: Opens an in-game editor for creating a new Dialog or editing an existing Dialog by ID. Supports all Minecraft Dialog types, validates and normalizes input values, saves the JSON into a world data pack, and applies changes immediately through registry hot-swapping. Shows a warning screen if the target datapack does not exist yet (added in 1.2.1).
     *   **KR**: 새로운 Dialog를 만들거나 ID로 기존 Dialog를 편집할 수 있는 인게임 편집기를 엽니다. Minecraft의 모든 Dialog 유형을 지원하며, 입력값을 검증 및 보정하고 월드 데이터팩에 JSON을 저장한 뒤 레지스트리 hot-swap을 통해 변경사항을 즉시 적용합니다. 아직 존재하지 않는 데이터팩에 저장하려 할 시 경고 화면을 띄워줍니다 (1.2.1 추가).
@@ -47,8 +53,26 @@
 
 ---
 
+## Development setup config / 개발 환경 설정
+The mod creates `config/mapmakerutils.json` on startup. Edit `devSetupCommands` to add, remove, or reorder commands. The file is read again on every `/devsetup`; no restart is needed. On multiplayer servers, edit the server's config. Commands run in order as the caller, with their position, dimension and permissions. A leading `/` is optional. Invalid JSON or entries prevent execution without overwriting the file; individual command errors are reported by Minecraft.
+
+모드 실행 시 `config/mapmakerutils.json`이 생성됩니다. `devSetupCommands` 목록을 수정해 명령을 추가·삭제하거나 순서를 바꿀 수 있습니다. `/devsetup`을 실행할 때마다 파일을 다시 읽으므로 재시작이 필요 없습니다. 멀티플레이에서는 서버의 설정 파일을 수정하세요. 명령은 실행자의 위치·차원·권한을 기준으로 순서대로 실행하며, 앞의 `/`는 생략할 수 있습니다. 잘못된 JSON이나 목록 항목은 실행을 중단하고 기존 파일을 유지합니다. 개별 명령어 오류는 Minecraft가 표시합니다.
+
+```json
+{
+  "devSetupCommands": [
+    "gamerule minecraft:advance_time false",
+    "time set noon",
+    "gamerule minecraft:advance_weather false",
+    "weather clear",
+    "gamerule minecraft:spawn_mobs false",
+    "gamerule minecraft:mob_griefing false"
+  ]
+}
+```
+
 ## Requirements / 요구 사양
-*   **Minecraft**: 26.3 (v26.3-1.2.2). For Minecraft 26.2, use the `26.2` branch (v26.2-1.2.2).
+*   **Minecraft**: 26.3 (v26.3-1.3.0). For Minecraft 26.2, use the `26.2` branch (v26.2-1.2.2).
 *   **Java**: 25+
 *   **Fabric Loader**: 0.19.5+
 *   **Fabric API**: Required
@@ -62,6 +86,12 @@ This mod is available under the **MIT License**.
 ---
 
 ## Changelog / 변경 사항
+### v26.3-1.3.0
+- Add `/devsetup` with configurable commands in `config/mapmakerutils.json` for world development settings.
+- Report data pack loading errors during `/reload` as file paths and available line numbers, including functions, tags and reloadable registries.
+- `/devsetup` 개발 환경 설정 명령어와 커스텀 명령 목록 설정을 추가했습니다.
+- `/reload` 중 데이터팩 오류의 파일 경로와 확인 가능한 줄 번호를 채팅에 표시합니다.
+
 ### v26.3-1.2.2
 - Update to Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3 and Gradle 9.6.0.
 - Use Minecraft's mouse button constants so the dialog editor scrollbar works with the SDL input backend.

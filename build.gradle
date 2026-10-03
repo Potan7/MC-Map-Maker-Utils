@@ -90,6 +90,25 @@ publishing {
 	}
 }
 
+tasks.register('checkDevSetupConfig', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.output + sourceSets.test.compileClasspath
+	mainClass = 'com.potan.mapmakerutils.DevSetupConfigCheck'
+	enableAssertions = true
+}
+tasks.named('check') { dependsOn 'checkDevSetupConfig' }
+tasks.named('test') { exclude '**/DevSetupConfigCheck.class' }
+
+tasks.register('checkReloadDiagnostics', JavaExec) {
+	dependsOn testClasses
+	workingDir = layout.buildDirectory.get().asFile
+	classpath = sourceSets.test.output + sourceSets.test.compileClasspath
+	mainClass = 'com.potan.mapmakerutils.ReloadDiagnosticsCheck'
+	enableAssertions = true
+}
+tasks.named('check') { dependsOn 'checkReloadDiagnostics' }
+tasks.named('test') { exclude '**/ReloadDiagnosticsCheck.class' }
+
 tasks.register('inspectClasspath') {
 	doLast {
 		println "=== INSPECTING CLASS METHODS ==="
