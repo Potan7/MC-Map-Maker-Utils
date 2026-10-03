@@ -1,6 +1,6 @@
 package com.potan.mapmakerutils.mixin.client;
 
-import com.potan.mapmakerutils.MapMakerUtilsClient;
+import com.potan.mapmakerutils.ReloadDiagnostics;
 import com.potan.mapmakerutils.ModGlobalState;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceKey; // 임포트 필수
@@ -31,7 +31,7 @@ public class RegistryErrorMixin {
             ResourceKey<?> fileKey = entry.getKey();
             Exception exception = entry.getValue();
 
-            String filePath = fileKey.identifier().toString();
+            String filePath = ReloadDiagnostics.registryFile(fileKey);
             String errorMsg = exception.getMessage();
 
             // 메시지 다듬기

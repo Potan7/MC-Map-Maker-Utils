@@ -87,6 +87,7 @@ This mod is available under the **MIT License**.
 
 ## Changelog / 변경 사항
 ### v26.3-1.3.0
+- Show registry file paths, including registry folders, on the data pack loading failure screen; wrap long paths to fit the screen.
 - Add `/devsetup` with configurable commands in `config/mapmakerutils.json` for world development settings.
 - Report data pack loading errors during `/reload` as file paths and available line numbers, including functions, tags and reloadable registries.
 - `/devsetup` 개발 환경 설정 명령어와 커스텀 명령 목록 설정을 추가했습니다.

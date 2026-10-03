@@ -20,6 +20,12 @@ public class ReloadDiagnosticsCheck {
         assert !ReloadDiagnostics.accepts("net.minecraft.tags.TagLoader", Level.INFO);
         assert ReloadDiagnostics.registryFile(ResourceKey.create(Registries.ADVANCEMENT,
                 Identifier.parse("test:folder/broken"))).equals("data/test/advancement/folder/broken.json");
+        assert ReloadDiagnostics.registryFile(ResourceKey.create(Registries.ADVANCEMENT,
+                Identifier.parse("potan:broken"))).equals("data/potan/advancement/broken.json");
+        assert ReloadDiagnostics.registryFile(ResourceKey.create(Registries.RECIPE,
+                Identifier.parse("potan:broken"))).equals("data/potan/recipe/broken.json");
+        assert ReloadDiagnostics.registryFile(ResourceKey.create(Registries.FEATURE,
+                Identifier.parse("potan:folder/broken"))).equals("data/potan/worldgen/feature/folder/broken.json");
         assert ReloadDiagnostics.lineNumber(new RuntimeException("outer",
                 new IllegalArgumentException("Malformed JSON at line 17 column 4"))) == 17;
         assert ReloadDiagnostics.lineNumber(new RuntimeException("Missing required field")) == -1;

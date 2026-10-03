@@ -1,6 +1,5 @@
 package com.potan.mapmakerutils.mixin.client;
 
-import com.potan.mapmakerutils.MapMakerUtilsClient;
 import com.potan.mapmakerutils.ModGlobalState;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.DatapackLoadFailureScreen;
@@ -33,12 +32,10 @@ public class DatapackLoadFailureScreenMixin extends Screen {
         int y = 30;
 
         for (String line : lines) {
-            // [핵심] 26.1에서는 graphics 객체가 그리기 명령을 추출(Extract)합니다.
-//            graphics.drawCenteredString(this.font, line, this.width / 2, y, 0xFFFFFFFF);
-            graphics.centeredText(this.font, line, this.width / 2, y, 0xFFFFFFFF);
-
-            // 다음 줄로 이동 (폰트 높이 + 2픽셀 여백)
-            y += fontHeight + 2;
+            for (var wrapped : this.font.split(Component.literal(line), Math.max(1, this.width - 40))) {
+                graphics.centeredText(this.font, wrapped, this.width / 2, y, 0xFFFFFFFF);
+                y += fontHeight + 2;
+            }
         }
     }
 

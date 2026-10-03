@@ -87,7 +87,7 @@ public final class ReloadDiagnostics {
         for (Capture capture : ACTIVE.values()) capture.add(registryFile(key), error);
     }
 
-    static String registryFile(ResourceKey<?> key) {
+    public static String registryFile(ResourceKey<?> key) {
         return "data/" + key.identifier().getNamespace() + "/" + key.registry().getPath()
                 + "/" + key.identifier().getPath() + ".json";
     }
